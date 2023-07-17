@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "965438415924",
+    "project_id": "test-ble-receiver",
+    "storage_bucket": "test-ble-receiver.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:965438415924:android:cb220234e1734f67041661",
+        "android_client_info": {
+          "package_name": "de.kai_morich.serial_usb_terminal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "965438415924-f5447kenvi8rvprs945vh182uv3dllpi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCi_FeCOZ7UdwkMAP37mdvhvApRaZ1EhI0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "965438415924-f5447kenvi8rvprs945vh182uv3dllpi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:965438415924:android:5c9b1b0b2c41cd29041661",
+        "android_client_info": {
+          "package_name": "de.kai_morich.simple_usb_terminal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "965438415924-f5447kenvi8rvprs945vh182uv3dllpi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCi_FeCOZ7UdwkMAP37mdvhvApRaZ1EhI0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "965438415924-f5447kenvi8rvprs945vh182uv3dllpi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

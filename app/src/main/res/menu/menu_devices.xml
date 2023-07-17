@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/refresh"
+        android:title="Refresh Devices" />
+    <item
+        android:id="@+id/baud_rate"
+        android:title="Baud rate" />
+    <item
+        android:id="@+id/upload"
+        android:title="Test Upload" />
+</menu>

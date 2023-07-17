@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/baud_rate_post"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:text="Baud rate:"
+        android:textSize="20sp"
+        android:padding="20sp"
+        android:inputType="text"/>
+
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="9600"
+            android:textSize="20sp" />
+
+        <RadioButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="19200"
+            android:textSize="20sp" />
+
+        <RadioButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="115600"
+            android:textSize="20sp" />
+
+    </RadioGroup>
+
+</LinearLayout>
