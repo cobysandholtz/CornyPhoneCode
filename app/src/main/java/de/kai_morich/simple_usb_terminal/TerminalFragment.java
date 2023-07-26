@@ -53,6 +53,8 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -442,6 +444,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     //region Serial
 
+    //import java.nio.ByteBuffer;
+
+
+
+
+
     private void connect() {
         connect(null);
     }
@@ -572,12 +580,24 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             pendingPacket = BlePacket.parsePacket(data);
         } else if (BGapi.isAngleResponse(data)) {
-            float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
-            String hexVal = Float.toHexString(angle_voltage);
+            //parsing out end of data to find angle
+            String truncData = "";
+            int pot_int = 0;
+            for(int i = data.length - 4; i < data.length; i++) {
+                truncData += String.format("%02X", data[i]);
+                //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
+            }
+            Long pot_long = Long.parseLong(truncData, 16);
+            pot_int =  Integer.reverseBytes(pot_long.intValue());
 
-            float pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
+            float pot_voltage = Float.intBitsToFloat(pot_int);
+
+            float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
             SensorHelper.setHeading(pot_angle);
-            receiveText.append("Got angle: " + pot_angle + '\n' + "Hex Value: " + hexVal + '\n');
+            receiveText.append("Got angle: " + pot_angle + '\n'
+                    + "Truncated Hex: " + truncData + '\n'
+                    + "Voltage Value:" + pot_voltage + '\n' );
+
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
             SpannableStringBuilder tempSpan = new SpannableStringBuilder("Got temp: "+temperature+"\n");
@@ -602,6 +622,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     }
 
+
     /**
      * Print to the textview in a different color so that it stands out
      * */
@@ -622,7 +643,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         connected = Connected.True;
         //send setup and start commands after delay via custom Handler
         Handler handler = new Handler();
-        //Runnable clickSetup = () -> onSetupClicked(null);
+        //Runnable clickSetup = () -> onSetupClicked(null); // makes the baud rate array show up
         //handler.postDelayed(clickSetup, 2500);
         Runnable clickStart = () -> onStartClicked(null);
         handler.postDelayed(clickStart, 2700);
