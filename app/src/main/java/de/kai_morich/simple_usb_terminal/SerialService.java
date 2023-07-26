@@ -85,7 +85,7 @@ public class SerialService extends Service implements SerialListener {
 
     // rotation variables
     private long motorRotateTime = 500; /*.5 s*/
-    private long motorSleepTime = 5000; /*5 s*/
+    private long motorSleepTime = 10;  /*0.01 s*/
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
     private static double headingMin = 0.0;
     private static double headingMax = 360.0;
