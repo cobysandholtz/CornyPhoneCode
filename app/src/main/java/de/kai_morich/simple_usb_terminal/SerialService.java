@@ -86,7 +86,10 @@ public class SerialService extends Service implements SerialListener {
     // rotation variables
     private long motorRotateTime = 1500; /*1.5 s*/
     private long motorSleepTime = 100;  /*0.1 s*/
+    private long messageDelay = 250; /*0.25*/
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
+    private static double minAngle = 0.0; // or -50?
+    private static double maxAngle = 450.0;
     private static double headingMin = 0.0;
     private static double headingMax = 360.0;
     private static boolean treatHeadingMinAsMax = false;
@@ -125,7 +128,7 @@ public class SerialService extends Service implements SerialListener {
                     //ask for the current angle
                     String angleQuery = BGapi.GET_ANGLE;
                     write(TextUtil.fromHexString(angleQuery)); //send data to chip to get angle data
-                    SystemClock.sleep(250);
+                    SystemClock.sleep(messageDelay);
 
                     //determine whether to rotate clockwise or counter clockwise
                     double oldHeading = SensorHelper.getHeading();
@@ -139,10 +142,11 @@ public class SerialService extends Service implements SerialListener {
                     String rotationSpeed = BGapi.ROTATE_FAST;
 
                     write(TextUtil.fromHexString(rotationSpeed));
-                    SystemClock.sleep(250);
+                    SystemClock.sleep(messageDelay);
                     write(TextUtil.fromHexString(rotateCommand));
                     SystemClock.sleep(motorRotateTime);
                     write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+                    SystemClock.sleep(messageDelay);
 
                     //determine new rotation state
                     double currentHeading = SensorHelper.getHeading();
@@ -255,20 +259,20 @@ public class SerialService extends Service implements SerialListener {
         }
 
         private boolean OutsideLowerBound(double heading) {
-            if(heading >= 0 && heading < headingMin) {return true; } else { return false; }
+            if(heading >= minAngle && heading < headingMin) {return true; } else { return false; }
         }
 
         private boolean OutsideUpperBound(double heading) {
-            if(heading > headingMax && heading < 450) {return true; } else { return false; }
+            if(heading > headingMax && heading < maxAngle) {return true; } else { return false; }
         }
 
         // for treatHeadingMinAsMax == true
         private boolean InsideUpperBound(double heading) {
-            if(heading >= headingMax && heading < 450) {return true; } else { return false; }
+            if(heading >= headingMax && heading < maxAngle) {return true; } else { return false; }
         }
 
         private boolean InsideLowerBound(double heading) {
-            if(heading >= 0 && heading <= headingMin) {return true; } else { return false; }
+            if(heading >= minAngle && heading <= headingMin) {return true; } else { return false; }
         }
 
         private boolean OutsideBounds(double heading) {
@@ -573,7 +577,7 @@ public class SerialService extends Service implements SerialListener {
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
                 String truncData = "";
-                int pot_int = 0;
+                int pot_int;
                 for(int i = data.length - 4; i < data.length; i++) {
                     truncData += String.format("%02X", data[i]);
                     //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?

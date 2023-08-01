@@ -580,16 +580,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             pendingPacket = BlePacket.parsePacket(data);
         } else if (BGapi.isAngleResponse(data)) {
-            //parsing out end of data to find angle
+            //parsing out end of data to find voltage/angle
             String truncData = "";
-            int pot_int = 0;
+            int pot_int;
             for(int i = data.length - 4; i < data.length; i++) {
                 truncData += String.format("%02X", data[i]);
                 //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
             }
             Long pot_long = Long.parseLong(truncData, 16);
             pot_int =  Integer.reverseBytes(pot_long.intValue());
-
             float pot_voltage = Float.intBitsToFloat(pot_int);
 
             float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
@@ -654,7 +653,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onSerialConnectError(Exception e) {
         status("connection failed: " + e.getMessage());
         disconnect();
-        SystemClock.sleep(250);
+        SystemClock.sleep(200);
         connect();
     }
 

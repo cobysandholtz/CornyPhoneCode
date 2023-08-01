@@ -66,7 +66,7 @@ public class SensorHelper extends Service implements SensorEventListener {
         //if(heading <= 0) {
         //    heading = pot_angle;
         //}
-        //else if(difference < 25 ) {
+        //else if(difference < 50 ) {
         //    heading = pot_angle;
         //}
         heading = pot_angle;
