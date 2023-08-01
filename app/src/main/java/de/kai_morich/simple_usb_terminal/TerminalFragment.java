@@ -593,10 +593,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             float pot_voltage = Float.intBitsToFloat(pot_int);
 
             float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+            //float pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
             SensorHelper.setHeading(pot_angle);
-            receiveText.append("Got angle: " + pot_angle + '\n'
-                    + "Truncated Hex: " + truncData + '\n'
-                    + "Voltage Value:" + pot_voltage + '\n' );
+            receiveText.append("Got angle: " + pot_angle + '\n' //);
+                    + "Got Voltage: " + pot_voltage + '\n');
+                    //+ "Voltage Value:" + pot_voltage + '\n' );
 
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
@@ -653,6 +654,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onSerialConnectError(Exception e) {
         status("connection failed: " + e.getMessage());
         disconnect();
+        SystemClock.sleep(250);
+        connect();
     }
 
     @Override
@@ -665,6 +668,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         status("connection lost: " + e.getMessage());
 //        status(Log.getStackTraceString(e));
         disconnect();
+        SystemClock.sleep(250);
+        connect();
     }
 
     private float[] listToArray(List<Float> list){

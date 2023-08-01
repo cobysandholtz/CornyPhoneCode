@@ -84,8 +84,8 @@ public class SerialService extends Service implements SerialListener {
     private boolean connected;
 
     // rotation variables
-    private long motorRotateTime = 500; /*.5 s*/
-    private long motorSleepTime = 10;  /*0.01 s*/
+    private long motorRotateTime = 1500; /*1.5 s*/
+    private long motorSleepTime = 100;  /*0.1 s*/
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
     private static double headingMin = 0.0;
     private static double headingMax = 360.0;
@@ -122,7 +122,12 @@ public class SerialService extends Service implements SerialListener {
 
             try {
                 if (connected) {
+                    //ask for the current angle
+                    String angleQuery = BGapi.GET_ANGLE;
+                    write(TextUtil.fromHexString(angleQuery)); //send data to chip to get angle data
+                    SystemClock.sleep(250);
 
+                    //determine whether to rotate clockwise or counter clockwise
                     double oldHeading = SensorHelper.getHeading();
                     String rotateCommand;
                     if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
@@ -130,13 +135,17 @@ public class SerialService extends Service implements SerialListener {
                     else
                         rotateCommand = BGapi.ROTATE_CCW;
 
+                    //command motor to turn how we want
+                    String rotationSpeed = BGapi.ROTATE_FAST;
+
+                    write(TextUtil.fromHexString(rotationSpeed));
+                    SystemClock.sleep(250);
                     write(TextUtil.fromHexString(rotateCommand));
                     SystemClock.sleep(motorRotateTime);
                     write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
 
-
-                    //previous code to swivel the motor indefinitely
-                    double currentHeading = SensorHelper.getHeading(); //+180;
+                    //determine new rotation state
+                    double currentHeading = SensorHelper.getHeading();
                     if (treatHeadingMinAsMax) { //valid range goes through 0, such as 270->30
                         //where --- is out of bounds, ==== is in bounds,
                         //and >-> or <-< marks the current heading and direction
@@ -214,15 +223,16 @@ public class SerialService extends Service implements SerialListener {
                         }
                     }
 
-                    String headingInfo = "currentHeading: "+currentHeading
-                                + "\nmin: "+headingMin+"\nmax: "+headingMax
-                                + "\nminAsMax: "+treatHeadingMinAsMax
-                                + "\nstate: "+rotationState ;
+                    //print current info to screen
+                    String headingInfo = "currentHeading: "+ currentHeading
+                                + "\nmin: " + headingMin + "\nmax: " + headingMax
+                                + "\nminAsMax: " + treatHeadingMinAsMax
+                                + "\nstate: " + rotationState ;
                     Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATS);
                     intent.putExtra(TerminalFragment.RECEIVE_HEADING_EXTRA, headingInfo);
                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
 
-
+                    //save rotation status to firebase log
                     FirebaseService.Companion.getServiceInstance().appendHeading(
                             currentHeading, headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
                 }
@@ -249,12 +259,12 @@ public class SerialService extends Service implements SerialListener {
         }
 
         private boolean OutsideUpperBound(double heading) {
-            if(heading > headingMax && heading < 360) {return true; } else { return false; }
+            if(heading > headingMax && heading < 450) {return true; } else { return false; }
         }
 
         // for treatHeadingMinAsMax == true
         private boolean InsideUpperBound(double heading) {
-            if(heading >= headingMax && heading < 360) {return true; } else { return false; }
+            if(heading >= headingMax && heading < 450) {return true; } else { return false; }
         }
 
         private boolean InsideLowerBound(double heading) {
@@ -562,8 +572,25 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
-                float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
-                pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
+                String truncData = "";
+                int pot_int = 0;
+                for(int i = data.length - 4; i < data.length; i++) {
+                    truncData += String.format("%02X", data[i]);
+                    //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
+                }
+                Long pot_long = Long.parseLong(truncData, 16);
+                pot_int =  Integer.reverseBytes(pot_long.intValue());
+
+                float pot_voltage = Float.intBitsToFloat(pot_int);
+
+                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+                //pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
+
+
+
+                //float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
+                //pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
+
                 //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
                 //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
                 //with the offset depending on how we want to deal with wrapping around 0
