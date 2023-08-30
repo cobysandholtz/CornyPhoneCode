@@ -522,7 +522,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
      * Send a String to the currently connected serial device. Returns immediately if no
      * device is connected. Additionally appends the sent information to the text on screen
      * */
-    private void send(String str) {
+    public void send(String str) {
         if (connected != Connected.True) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;

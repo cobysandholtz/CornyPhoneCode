@@ -84,14 +84,17 @@ public class SerialService extends Service implements SerialListener {
     private boolean connected;
 
     // rotation variables
-    private long motorRotateTime = 1500; /*1.5 s*/
-    private long motorSleepTime = 100;  /*0.1 s*/
     private long messageDelay = 250; /*0.25*/
+    private long motorRotateTime = 1000; /*1 s*/
+    private long motorSleepTime = 2000;  /*2 s*/
+//    private int motorSpeed = 4; /* degrees per second */
+//    private double ExpectedAngleDistance = (motorRotateTime / 1000) * motorSpeed;
+//    private double ErrorWindow = ExpectedAngleDistance + (2 * (motorRotateTime / 1000));
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
-    private static double minAngle = 0.0; // or -50?
-    private static double maxAngle = 450.0;
-    private static double headingMin = 0.0;
-    private static double headingMax = 360.0;
+    private static double minAngle = 75.0; // or -50?
+    private static double maxAngle = 395.0;
+    private static double headingMin = 75.0;
+    private static double headingMax = 395.0;
     private static boolean treatHeadingMinAsMax = false;
     //in degrees, if the last time the motor moved less than this amount,
     // we assume the motor has stopped us and it is time to turn around
@@ -103,6 +106,7 @@ public class SerialService extends Service implements SerialListener {
     private BlePacket pendingPacket;
     private byte[] pendingBytes = null;
     private static SerialService instance;
+    private TerminalFragment TFragJustToSend;
     public static float pot_angle;
 
     public static final String KEY_STOP_MOTOR_ACTION = "SerialService.stopMotorAction";
@@ -125,31 +129,53 @@ public class SerialService extends Service implements SerialListener {
 
             try {
                 if (connected) {
-                    //ask for the current angle
-                    String angleQuery = BGapi.GET_ANGLE;
-                    write(TextUtil.fromHexString(angleQuery)); //send data to chip to get angle data
-                    SystemClock.sleep(messageDelay);
-
-                    //determine whether to rotate clockwise or counter clockwise
+                    TFragJustToSend = TerminalFragment.getInstance();
                     double oldHeading = SensorHelper.getHeading();
                     String rotateCommand;
-                    if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
+                    if (rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
                         rotateCommand = BGapi.ROTATE_CW;
                     else
                         rotateCommand = BGapi.ROTATE_CCW;
 
-                    //command motor to turn how we want
-                    String rotationSpeed = BGapi.ROTATE_FAST;
-
-                    write(TextUtil.fromHexString(rotationSpeed));
-                    SystemClock.sleep(messageDelay);
                     write(TextUtil.fromHexString(rotateCommand));
+
+                    TFragJustToSend.send(rotateCommand);
+                    SystemClock.sleep(messageDelay);
+                    TFragJustToSend.send(BGapi.ROTATE_FAST);
                     SystemClock.sleep(motorRotateTime);
-                    write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+                    TFragJustToSend.send(BGapi.ROTATE_STOP);
                     SystemClock.sleep(messageDelay);
 
-                    //determine new rotation state
+                    TFragJustToSend.send(BGapi.GET_ANGLE);
+                    SystemClock.sleep(messageDelay);
                     double currentHeading = SensorHelper.getHeading();
+
+//                    //ask for the current angle
+//                    String angleQuery = BGapi.GET_ANGLE;
+//                    write(TextUtil.fromHexString(angleQuery)); //send data to chip to get angle data
+//                    SystemClock.sleep(messageDelay);
+//
+//                    //determine whether to rotate clockwise or counter clockwise
+//                    double oldHeading = SensorHelper.getHeading();
+//                    String rotateCommand;
+//                    if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
+//                        rotateCommand = BGapi.ROTATE_CW;
+//                    else
+//                        rotateCommand = BGapi.ROTATE_CCW;
+//
+//                    //command motor to turn how we want
+//                    String rotationSpeed = BGapi.ROTATE_FAST;
+//
+//                    write(TextUtil.fromHexString(rotationSpeed));
+//                    SystemClock.sleep(messageDelay);
+//                    write(TextUtil.fromHexString(rotateCommand));
+//                    SystemClock.sleep(motorRotateTime);
+//                    write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+//                    SystemClock.sleep(messageDelay);
+//
+//                    //determine new rotation state
+//                    double currentHeading = SensorHelper.getHeading();
+
                     if (treatHeadingMinAsMax) { //valid range goes through 0, such as 270->30
                         //where --- is out of bounds, ==== is in bounds,
                         //and >-> or <-< marks the current heading and direction
@@ -245,6 +271,7 @@ public class SerialService extends Service implements SerialListener {
                 if (isMotorRunning) {
                     motorHandler.postDelayed(this, motorSleepTime);
                 }
+
             } catch (IOException e) {
                 Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
                 e.printStackTrace();
