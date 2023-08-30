@@ -141,6 +141,8 @@ public class SerialService extends Service implements SerialListener {
                     //command motor to turn how we want
                     String rotationSpeed = BGapi.ROTATE_FAST;
 
+                    // Add ANOTHER comment to make it just commit
+
                     write(TextUtil.fromHexString(rotationSpeed));
                     SystemClock.sleep(messageDelay);
                     write(TextUtil.fromHexString(rotateCommand));
