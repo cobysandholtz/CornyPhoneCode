@@ -61,17 +61,7 @@ public class SensorHelper extends Service implements SensorEventListener {
     }
 
     public static void setHeading(float pot_angle)  {
-        //small alpha filter
-        //double difference = Math.abs(heading - pot_angle);
-        //if(heading <= 0) {
-        //    heading = pot_angle;
-        //}
-        //else if(difference < 50 ) {
-        //    heading = pot_angle;
-        //}
         heading = pot_angle;
-
-
     }
 
     /**

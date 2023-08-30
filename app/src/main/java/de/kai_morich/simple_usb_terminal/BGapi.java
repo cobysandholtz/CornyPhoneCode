@@ -41,8 +41,8 @@ public class BGapi {
         commands.put("scanner_stop", "20000505");
         commands.put("message_rotate_slow", "2002FF000101");//this is toggle PWM_LOW
         commands.put("message_rotate_fast", "2002FF000102");//this is toggle PWM_HIGH
-        commands.put("message_rotate_cw", "2002FF000104");//this is move MTR_RIGHT
-        commands.put("message_rotate_ccw", "2002FF000103");//this is move MTR_LEFT
+        commands.put("message_rotate_ccw", "2002FF000104");//this is move MTR_RIGHT
+        commands.put("message_rotate_cw", "2002FF000103");//this is move MTR_LEFT
         commands.put("message_rotate_stop", "2002FF000105");//this is PWM_OFF
         commands.put("message_read_pot_angle", "2002FF000106");
         commands.put("message_get_temp", "2002FF000104");

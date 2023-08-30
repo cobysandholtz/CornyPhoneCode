@@ -1,5 +1,6 @@
 package de.kai_morich.simple_usb_terminal;
 
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -15,6 +16,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -25,6 +27,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.lang.Math;
 
 /**
  * Service that serves as our end of communication with the Gecko device. Because I forked this
@@ -84,14 +87,14 @@ public class SerialService extends Service implements SerialListener {
     private boolean connected;
 
     // rotation variables
-    private long motorRotateTime = 1500; /*1.5 s*/
-    private long motorSleepTime = 100;  /*0.1 s*/
-    private long messageDelay = 250; /*0.25*/
+    private long motorRotateTime = 1000; /*1 s*/
+    private long motorSleepTime = 2000;  /*2 s*/
+    private int motorSpeed = 4; /* degrees per second */
+    private double ExpectedAngleDistance = (motorRotateTime / 1000) * motorSpeed;
+    private double ErrorWindow = ExpectedAngleDistance + (2 * (motorRotateTime / 1000));
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
-    private static double minAngle = 0.0; // or -50?
-    private static double maxAngle = 450.0;
-    private static double headingMin = 0.0;
-    private static double headingMax = 360.0;
+    private static double headingMin = 75.0;
+    private static double headingMax = 395.0;
     private static boolean treatHeadingMinAsMax = false;
     //in degrees, if the last time the motor moved less than this amount,
     // we assume the motor has stopped us and it is time to turn around
@@ -103,8 +106,10 @@ public class SerialService extends Service implements SerialListener {
     private BlePacket pendingPacket;
     private byte[] pendingBytes = null;
     private static SerialService instance;
+    private TerminalFragment TFragJustToSend;
+//    private static Activity view;
+//    private static TextView receiveText = view.findViewById(R.id.receive_text);
     public static float pot_angle;
-
     public static final String KEY_STOP_MOTOR_ACTION = "SerialService.stopMotorAction";
     public static final String KEY_MOTOR_SWITCH_STATE = "SerialService.motorSwitchState";
     public static final String KEY_HEADING_RANGE_ACTION = "SerialService.headingRangeAction";
@@ -122,136 +127,172 @@ public class SerialService extends Service implements SerialListener {
 
         @Override
         public void run() {
-
-            try {
-                if (connected) {
-                    //ask for the current angle
-                    String angleQuery = BGapi.GET_ANGLE;
-                    write(TextUtil.fromHexString(angleQuery)); //send data to chip to get angle data
-                    SystemClock.sleep(messageDelay);
-
-                    //determine whether to rotate clockwise or counter clockwise
-                    double oldHeading = SensorHelper.getHeading();
-                    String rotateCommand;
-                    if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
-                        rotateCommand = BGapi.ROTATE_CW;
-                    else
-                        rotateCommand = BGapi.ROTATE_CCW;
-
-                    //command motor to turn how we want
-                    String rotationSpeed = BGapi.ROTATE_FAST;
-
-                    // Add ANOTHER comment to make it just commit
-
-                    write(TextUtil.fromHexString(rotationSpeed));
-                    SystemClock.sleep(messageDelay);
-                    write(TextUtil.fromHexString(rotateCommand));
-                    SystemClock.sleep(motorRotateTime);
-                    write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
-                    SystemClock.sleep(messageDelay);
-
-                    //determine new rotation state
-                    double currentHeading = SensorHelper.getHeading();
-                    if (treatHeadingMinAsMax) { //valid range goes through 0, such as 270->30
-                        //where --- is out of bounds, ==== is in bounds,
-                        //and >-> or <-< marks the current heading and direction
-                        // looks like: 0<====|-------|=====>360
-                        switch (rotationState) { //switch on what state we used to make the previous rotation
-                            case IN_BOUNDS_CW: //0<=== >-> ==|-----|====>360
-                                // turn around once we pass the min
-                                if (OutsideBounds(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
-                                }
-                                break;
-                            case IN_BOUNDS_CCW: // 0<====|----|==== <-< ===>360
-                                // turn back around once we pass the max
-                                if (OutsideBounds(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CW: // 0<===|--- >-> |====>360
-                                // set to back in bounds after passing the max
-                                //   and continue CW
-                                if (InsideUpperBound(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CW;
-                                } else if (InsideLowerBound(currentHeading)) {     // if for some reason it gets off,
-                                    rotationState = RotationState.IN_BOUNDS_CCW;   // make sure it knows it's inside bounds
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CCW: // 0<===| <-< ---|====>360
-                                // set back in bounds after passing the min
-                                if (InsideLowerBound(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CCW;
-                                } else if (InsideUpperBound(currentHeading)) {     // if for some reason it gets off,
-                                    rotationState = RotationState.IN_BOUNDS_CW;    //make sure it knows it's inside bounds
-                                }
-                                break;
-                        }
-                    } else { //valid range goes around 0, such as 90->120
-                        //where ---- is out of bounds and ==== is in bounds,
-                        //and <-< or >-> marks the current heading and direction
-                        // 0<----|========|----->360
-                        switch (rotationState) {
-                            case IN_BOUNDS_CW: // 0<--|====== >-> ====|-->360
-                                // turn around once we pass the max
-                                if (OutsideUpperBound(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
-                                } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                            case IN_BOUNDS_CCW: // 0<--|== <-< ======|-->360
-                                // turn around once we pass the min
-                                if(OutsideLowerBound(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
-                                } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CW: // 0<-- >-> |========|-->360
-                                // set to back in bounds after passing the min
-                                //   and continue CW
-                                if(InsideBounds(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CW;
-                                } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CCW: // 0<--|======| <-< -->360
-                                // set back to in bounds after passing the max
-                                //   and continue CCW
-                                if(InsideBounds(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CCW;
-                                } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                        }
-                    }
-
-                    //print current info to screen
-                    String headingInfo = "currentHeading: "+ currentHeading
-                                + "\nmin: " + headingMin + "\nmax: " + headingMax
-                                + "\nminAsMax: " + treatHeadingMinAsMax
-                                + "\nstate: " + rotationState ;
-                    Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATS);
-                    intent.putExtra(TerminalFragment.RECEIVE_HEADING_EXTRA, headingInfo);
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-
-                    //save rotation status to firebase log
-                    FirebaseService.Companion.getServiceInstance().appendHeading(
-                            currentHeading, headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
-                }
-
-                //As long as we are to continue moving, schedule this method to be run again
+/**
+            if (connected) {
+                TFragJustToSend.send(BGapi.ROTATE_CW);
+                TFragJustToSend.send(BGapi.ROTATE_FAST);
+                SystemClock.sleep(120000);
                 if (isMotorRunning) {
                     motorHandler.postDelayed(this, motorSleepTime);
                 }
-            } catch (IOException e) {
-                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-                e.printStackTrace();
+            }
+*/
+
+
+//            try {
+
+            if (connected) {
+//                TFragJustToSend.status("\nIS RUNNING!!!\n");
+//                System.out.println("\nIS RUNNING!!!\n");
+                TFragJustToSend = TerminalFragment.getInstance();
+                double oldHeading = SensorHelper.getHeading();
+                String rotateCommand;
+                if (rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
+                    rotateCommand = BGapi.ROTATE_CW;
+                else
+                    rotateCommand = BGapi.ROTATE_CCW;
+
+                TFragJustToSend.send(rotateCommand);
+                SystemClock.sleep(250);
+                TFragJustToSend.send(BGapi.ROTATE_FAST);
+                SystemClock.sleep(motorRotateTime);
+                TFragJustToSend.send(BGapi.ROTATE_STOP);
+                SystemClock.sleep(250);
+
+//                   write(TextUtil.fromHexString(rotateCommand));
+//                   write(TextUtil.fromHexString(BGapi.ROTATE_FAST));
+//                   SystemClock.sleep(motorRotateTime);
+//                   write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+
+
+                // protects against outlier angle measurements by re-doing the get_angle request
+                // if the rotator could not reasonably have travelled as far as currentHeading
+                // claims that it did, on the basis of the rotator's angular velocity (called
+                // motorSpeed here)
+
+                TFragJustToSend.send(BGapi.GET_ANGLE);
+                SystemClock.sleep(250);
+                double currentHeading = SensorHelper.getHeading();
+
+//                double currentHeading;
+//                do {
+//                    TFragJustToSend.send(BGapi.GET_ANGLE);
+//                    SystemClock.sleep(250);
+//                    currentHeading = SensorHelper.getHeading();
+//                    double result = currentHeading - oldHeading;
+//                    String resultString = "\n" +"result: " + result + " | errorWindow: " + ErrorWindow + "\n";
+//                } while (Math.abs(currentHeading - oldHeading) <= ErrorWindow);
+
+//                double currentHeading;
+//                for (int i = 0; i < 10; i++) {
+//                    TFragJustToSend.send(BGapi.GET_ANGLE);
+//                    SystemClock.sleep(600);
+//                    currentHeading = SensorHelper.getHeading();
+//                    if (Math.abs(currentHeading - oldHeading) < 20) {
+//                        break;
+//                    }
+//                }
+
+
+                //previous code to swivel the motor indefinitely
+                if (treatHeadingMinAsMax) { //valid range goes through 0, such as 270->30
+                    //where --- is out of bounds, ==== is in bounds,
+                    //and >-> or <-< marks the current heading and direction
+                    // looks like: 0<====|-------|=====>360
+                    switch (rotationState) { //switch on what state we used to make the previous rotation
+                        case IN_BOUNDS_CW: //0<=== >-> ==|-----|====>360
+                            // turn around once we pass the min
+                            if (OutsideBounds(currentHeading)) {
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
+                            }
+                            break;
+                        case IN_BOUNDS_CCW: // 0<====|----|==== <-< ===>360
+                            // turn back around once we pass the max
+                            if (OutsideBounds(currentHeading)) {
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
+                            }
+                            break;
+                        case RETURNING_TO_BOUNDS_CW: // 0<===|--- >-> |====>360
+                            // set to back in bounds after passing the max
+                            //   and continue CW
+                            if (InsideUpperBound(currentHeading)) {
+                                rotationState = RotationState.IN_BOUNDS_CW;
+                            } else if (InsideLowerBound(currentHeading)) {     // if for some reason it gets off,
+                                rotationState = RotationState.IN_BOUNDS_CCW;   // make sure it knows it's inside bounds
+                            }
+                            break;
+                        case RETURNING_TO_BOUNDS_CCW: // 0<===| <-< ---|====>360
+                            // set back in bounds after passing the min
+                            if (InsideLowerBound(currentHeading)) {
+                                rotationState = RotationState.IN_BOUNDS_CCW;
+                            } else if (InsideUpperBound(currentHeading)) {     // if for some reason it gets off,
+                                rotationState = RotationState.IN_BOUNDS_CW;    //make sure it knows it's inside bounds
+                            }
+                            break;
+                    }
+                } else { //valid range does not go through 0, such as 90->120
+                    //where ---- is out of bounds and ==== is in bounds,
+                    //and <-< or >-> marks the current heading and direction
+                    // 0<----|========|----->360
+                    switch (rotationState) {
+                        case IN_BOUNDS_CW: // 0<--|====== >-> ====|-->360
+                            // turn around once we pass the max
+                            if (OutsideUpperBound(currentHeading)) {
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
+                            } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                        case IN_BOUNDS_CCW: // 0<--|== <-< ======|-->360
+                            // turn around once we pass the min
+                            if (OutsideLowerBound(currentHeading)) {
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
+                            } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                        case RETURNING_TO_BOUNDS_CW: // 0<-- >-> |========|-->360
+                            // set to back in bounds after passing the min
+                            //   and continue CW
+                            if (InsideBounds(currentHeading)) {
+                                rotationState = RotationState.IN_BOUNDS_CW;
+                            } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                        case RETURNING_TO_BOUNDS_CCW: // 0<--|======| <-< -->360
+                            // set back to in bounds after passing the max
+                            //   and continue CCW
+                            if (InsideBounds(currentHeading)) {
+                                rotationState = RotationState.IN_BOUNDS_CCW;
+                            } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                    }
+                }
+
+                String headingInfo = "currentHeading: " + currentHeading
+                        + "\nmin: " + headingMin + "\nmax: " + headingMax
+                        + "\nminAsMax: " + treatHeadingMinAsMax
+                        + "\nstate: " + rotationState;
+                Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATS);
+                intent.putExtra(TerminalFragment.RECEIVE_HEADING_EXTRA, headingInfo);
+                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+
+
+                FirebaseService.Companion.getServiceInstance().appendHeading(
+                        currentHeading, headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
             }
 
+            // As long as we are to continue moving, schedule this method to be run again
+            if (isMotorRunning) {
+                motorHandler.postDelayed(this, motorSleepTime);
+            }
+//            } catch (IOException e) {
+//                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+//                e.printStackTrace();
+//            }
 
         }
 
@@ -261,20 +302,20 @@ public class SerialService extends Service implements SerialListener {
         }
 
         private boolean OutsideLowerBound(double heading) {
-            if(heading >= minAngle && heading < headingMin) {return true; } else { return false; }
+            if(heading >= 0 && heading < headingMin) {return true; } else { return false; }
         }
 
         private boolean OutsideUpperBound(double heading) {
-            if(heading > headingMax && heading < maxAngle) {return true; } else { return false; }
+            if(heading > headingMax && heading < 360) {return true; } else { return false; }
         }
 
         // for treatHeadingMinAsMax == true
         private boolean InsideUpperBound(double heading) {
-            if(heading >= headingMax && heading < maxAngle) {return true; } else { return false; }
+            if(heading >= headingMax && heading < 360) {return true; } else { return false; }
         }
 
         private boolean InsideLowerBound(double heading) {
-            if(heading >= minAngle && heading <= headingMin) {return true; } else { return false; }
+            if(heading >= 0 && heading <= headingMin) {return true; } else { return false; }
         }
 
         private boolean OutsideBounds(double heading) {
@@ -578,25 +619,8 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
-                String truncData = "";
-                int pot_int;
-                for(int i = data.length - 4; i < data.length; i++) {
-                    truncData += String.format("%02X", data[i]);
-                    //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
-                }
-                Long pot_long = Long.parseLong(truncData, 16);
-                pot_int =  Integer.reverseBytes(pot_long.intValue());
-
-                float pot_voltage = Float.intBitsToFloat(pot_int);
-
-                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
-                //pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
-
-
-
-                //float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
-                //pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
-
+                float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
+                pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
                 //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
                 //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
                 //with the offset depending on how we want to deal with wrapping around 0

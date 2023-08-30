@@ -522,7 +522,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
      * Send a String to the currently connected serial device. Returns immediately if no
      * device is connected. Additionally appends the sent information to the text on screen
      * */
-    private void send(String str) {
+    public void send(String str) {
         if (connected != Connected.True) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
@@ -580,23 +580,23 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             pendingPacket = BlePacket.parsePacket(data);
         } else if (BGapi.isAngleResponse(data)) {
-            //parsing out end of data to find voltage/angle
+            //parsing out end of data to find angle
             String truncData = "";
-            int pot_int;
+            int pot_int = 0;
             for(int i = data.length - 4; i < data.length; i++) {
                 truncData += String.format("%02X", data[i]);
                 //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
             }
             Long pot_long = Long.parseLong(truncData, 16);
             pot_int =  Integer.reverseBytes(pot_long.intValue());
+
             float pot_voltage = Float.intBitsToFloat(pot_int);
 
             float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
-            //float pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
             SensorHelper.setHeading(pot_angle);
-            receiveText.append("Got angle: " + pot_angle + '\n' //);
-                    + "Got Voltage: " + pot_voltage + '\n');
-                    //+ "Voltage Value:" + pot_voltage + '\n' );
+            receiveText.append("Got angle: " + pot_angle + '\n'
+                    + "Truncated Hex: " + truncData + '\n'
+                    + "Voltage Value:" + pot_voltage + '\n' );
 
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
@@ -653,8 +653,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public void onSerialConnectError(Exception e) {
         status("connection failed: " + e.getMessage());
         disconnect();
-        SystemClock.sleep(200);
-        connect();
     }
 
     @Override
@@ -677,6 +675,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             toreturn[i] = list.get(i);
         }
         return toreturn;
+    }
+
+    public void printToScreen(String str) {
+        receiveText.setText(str);
     }
 
 }
