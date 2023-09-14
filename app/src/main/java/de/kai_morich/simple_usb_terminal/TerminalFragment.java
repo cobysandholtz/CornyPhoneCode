@@ -581,20 +581,35 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             pendingPacket = BlePacket.parsePacket(data);
         } else if (BGapi.isAngleResponse(data)) {
             //parsing out end of data to find voltage/angle
-            String truncData = "";
-            int pot_int;
-            for(int i = data.length - 4; i < data.length; i++) {
-                truncData += String.format("%02X", data[i]);
-                //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
-            }
-            Long pot_long = Long.parseLong(truncData, 16);
-            pot_int =  Integer.reverseBytes(pot_long.intValue());
-            float pot_voltage = Float.intBitsToFloat(pot_int);
+
+            int pot_bits;
+
+            //next 10 lines or so generated with chatGPT
+            byte[] lastTwoBytes = new byte[2];
+            // Extract the last 2 bytes
+            System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2);
+
+            // Extract the most significant 12 bits into an integer
+            pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+
+            //multiply by 1/(2^12) (Adc resolution)
+            float pot_voltage = (float) (pot_bits * 0.002);
+
+
+//            String truncData = "";
+//            int pot_int;
+//            for(int i = data.length - 4; i < data.length; i++) {
+//                truncData += String.format("%02X", data[i]);
+//                //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
+//            }
+//            Long pot_long = Long.parseLong(truncData, 16);
+//            pot_int =  Integer.reverseBytes(pot_long.intValue());
+//            float pot_voltage = Float.intBitsToFloat(pot_int);
 
             float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
             //float pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
             SensorHelper.setHeading(pot_angle);
-            receiveText.append("Got angle: " + pot_angle + '\n' //);
+            receiveText.append("Got bits: " + pot_bits + " Got angle: " + pot_angle + '\n' //);
                     + "Got Voltage: " + pot_voltage + '\n');
                     //+ "Voltage Value:" + pot_voltage + '\n' );
 

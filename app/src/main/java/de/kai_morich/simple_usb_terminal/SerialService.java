@@ -603,18 +603,32 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
-                String truncData = "";
+//                String truncData = "";
                 int pot_int;
-                for(int i = data.length - 4; i < data.length; i++) {
-                    truncData += String.format("%02X", data[i]);
-                    //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
-                }
-                Long pot_long = Long.parseLong(truncData, 16);
-                pot_int =  Integer.reverseBytes(pot_long.intValue());
 
-                float pot_voltage = Float.intBitsToFloat(pot_int);
+                //next 10 lines or so generated with chatGPT
+                byte[] lastTwoBytes = new byte[2];
+                // Extract the last 2 bytes
+                System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2);
 
-                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+                // Extract the most significant 12 bits into an integer
+                pot_int = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+
+                //multiply by 2^12 (Adc resolution)
+                pot_int = pot_int * 2^12;
+
+
+//                for(int i = data.length - 4; i < data.length; i++) {
+//                    truncData += String.format("%02X", data[i]);
+//                    //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
+//                }
+
+//                Long pot_long = Long.parseLong(truncData, 16);
+//                pot_int =  Integer.reverseBytes(pot_long.intValue());
+//
+//                float pot_voltage = Float.intBitsToFloat(pot_int);
+//
+//                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
                 //pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
 
 
