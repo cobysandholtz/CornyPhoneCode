@@ -146,7 +146,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:valueFrom="0"
-            android:valueTo="395"
+            android:valueTo="450"
             android:stepSize="1"
             app:values="@array/initial_slider_values" />
 

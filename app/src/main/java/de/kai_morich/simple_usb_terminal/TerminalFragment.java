@@ -166,6 +166,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         deviceId = getArguments().getInt("device");
         portNum = getArguments().getInt("port");
         baudRate = getArguments().getInt("baud");
+        SensorHelper.setHeading(0);
 
         bManager = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
         IntentFilter filter = new IntentFilter();
@@ -397,13 +398,15 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         } else if (id == R.id.manualCW) {
             send(BGapi.ROTATE_CW);
-            //SystemClock.sleep(500);
-            //send(BGapi.ROTATE_STOP);
+            SystemClock.sleep(250);
+            send(BGapi.ROTATE_FAST);
+            SystemClock.sleep(500);
             return true;
         } else if (id == R.id.manualCCW) {
             send(BGapi.ROTATE_CCW);
-            //SystemClock.sleep(500);
-            //send(BGapi.ROTATE_STOP);
+            SystemClock.sleep(250);
+            send(BGapi.ROTATE_FAST);
+            SystemClock.sleep(500);
             return true;
         } else if (id == R.id.manualSlow) {
             send(BGapi.ROTATE_SLOW);
@@ -593,10 +596,22 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
             //float pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
-            SensorHelper.setHeading(pot_angle);
-            receiveText.append("Got angle: " + pot_angle + '\n' //);
+
+            //alpha filter
+            double heading = SensorHelper.getHeading();
+            if((heading < 0.01) && (heading > -0.01) || (heading < -10) || (heading > 400)) {
+                heading = pot_angle;
+            }
+            else {
+                double difference = heading - pot_angle;
+                if( (difference > -20) && (difference < 20)) {
+                    heading = pot_angle;
+                }
+            }
+            SensorHelper.setHeading(heading);
+
+            receiveText.append("Got angle: " + pot_angle + '\n'
                     + "Got Voltage: " + pot_voltage + '\n');
-                    //+ "Voltage Value:" + pot_voltage + '\n' );
 
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
