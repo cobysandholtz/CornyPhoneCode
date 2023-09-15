@@ -103,6 +103,7 @@ public class SerialService extends Service implements SerialListener {
 
     private final long temperatureInterval = 300000; /*5 min*/
     private Handler temperatureHandler;
+
     private BlePacket pendingPacket;
     private byte[] pendingBytes = null;
     private static SerialService instance;
@@ -644,29 +645,24 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
-                updated_VtoA_message = updated_VtoA_message + "\nGot angle response!!!";
-                String truncData = "";
+//                String truncData = "";
                 int pot_int;
-                for(int i = data.length - 2; i < data.length; i++) {
-                    truncData += String.format("%02X", data[i]);
-                    //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
-                }
-                adcData = data;
-                truncDataGlobal = truncData;
-                truncData = truncData.substring(0, truncData.length() - 1);
-                Long pot_long = Long.parseLong(truncData, 16);
-                pot_int =  Integer.reverseBytes(pot_long.intValue());
 
-                pot_voltage = (float) (Float.intBitsToFloat(pot_int) * 0.002);
-//                pot_voltage = Float.intBitsToFloat(pot_int);
+                //next 10 lines or so generated with chatGPT
+                byte[] lastTwoBytes = new byte[2];
+                // Extract the last 2 bytes
+                System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2);
 
-//                if (!(degreesPerVolt == 0.0)) {
-//                    pot_angle = (float) ((pot_voltage - minVoltage) * degreesPerVolt);
-//                } else {
-//                    pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
-//                }
+                // Extract the most significant 12 bits into an integer
+                pot_int = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
 
+                //multiply by 2^12 (Adc resolution)
+                pot_int = pot_int * 2^12;
+
+
+                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
                 //pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
+
 
 
                 //float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload

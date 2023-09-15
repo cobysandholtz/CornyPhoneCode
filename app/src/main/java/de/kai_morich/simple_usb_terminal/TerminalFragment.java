@@ -398,15 +398,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         } else if (id == R.id.manualCW) {
             send(BGapi.ROTATE_CW);
-            SystemClock.sleep(250);
-            send(BGapi.ROTATE_FAST);
-            SystemClock.sleep(500);
+            //SystemClock.sleep(500);
+            //send(BGapi.ROTATE_STOP);
             return true;
         } else if (id == R.id.manualCCW) {
             send(BGapi.ROTATE_CCW);
-            SystemClock.sleep(250);
-            send(BGapi.ROTATE_FAST);
-            SystemClock.sleep(500);
+            //SystemClock.sleep(500);
+            //send(BGapi.ROTATE_STOP);
             return true;
         } else if (id == R.id.manualSlow) {
             send(BGapi.ROTATE_SLOW);
