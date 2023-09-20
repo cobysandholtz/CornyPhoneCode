@@ -580,37 +580,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 return;
 
             pendingPacket = BlePacket.parsePacket(data);
-        } else if (BGapi.isAngleResponse(data)) {
-            //parsing out end of data to find voltage/angle
-            String truncData = "";
-            int pot_int;
-            for(int i = data.length - 4; i < data.length; i++) {
-                truncData += String.format("%02X", data[i]);
-                //pot_int += (pot_int << 8) + (data[i] & 0xFF); // didn't work?
-            }
-            Long pot_long = Long.parseLong(truncData, 16);
-            pot_int =  Integer.reverseBytes(pot_long.intValue());
-            float pot_voltage = Float.intBitsToFloat(pot_int);
-
-            float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
-            //float pot_angle = (float) (((pot_voltage - 0.332) / (3.3 - 0.332)) * 360);
-
-            //alpha filter
-            double heading = SensorHelper.getHeading();
-            if((heading < 0.01) && (heading > -0.01) || (heading < -10) || (heading > 400)) {
-                heading = pot_angle;
-            }
-            else {
-                double difference = heading - pot_angle;
-                if( (difference > -20) && (difference < 20)) {
-                    heading = pot_angle;
-                }
-            }
-            SensorHelper.setHeading(heading);
-
-            receiveText.append("Got angle: " + pot_angle + '\n'
-                    + "Got Voltage: " + pot_voltage + '\n');
-
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
             SpannableStringBuilder tempSpan = new SpannableStringBuilder("Got temp: "+temperature+"\n");
