@@ -23,6 +23,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.lang.Math;
@@ -118,6 +119,7 @@ public class SerialService extends Service implements SerialListener {
     private int outOfBoundsCounter = 0;
     private String updated_VtoA_message = ""; // screen message when voltage to angle interpretation is updated
     private String outOfBoundsMessage = "";
+    private String randomDebuggingText = "";
 
     public static final String KEY_STOP_MOTOR_ACTION = "SerialService.stopMotorAction";
     public static final String KEY_MOTOR_SWITCH_STATE = "SerialService.motorSwitchState";
@@ -169,33 +171,6 @@ public class SerialService extends Service implements SerialListener {
                     if (differenceVoltage >= (2.6 / 12)) { // 2.6 is what maxV - minV should be close to
                         currentHeading = oldHeading;
                     }
-                }
-
-                if (Math.abs(oldVoltage - pot_voltage) < 0.00115) {
-                    rotatorLimitReachedCounter++;
-                    updated_VtoA_message = updated_VtoA_message + "\nStopped rotating " + rotatorLimitReachedCounter + " time(s)";
-
-                    if (rotatorLimitReachedCounter == 3) {
-                        rotatorLimitReachedCounter = 0;
-
-                        if (rotateCommand == BGapi.ROTATE_CW) {
-                            maxVoltage = pot_voltage;
-                            updated_VtoA_message = updated_VtoA_message + "\nMax Voltage Updated";
-                            rotationState = RotationState.IN_BOUNDS_CCW;
-                        } else {
-                            minVoltage = pot_voltage;
-                            updated_VtoA_message = updated_VtoA_message + "\nMin Voltage Updated";
-                            rotationState = RotationState.IN_BOUNDS_CW;
-                        }
-
-                        if (!(minVoltage == 0.0) && !(maxVoltage == 0.0)) {
-                            degreesPerVolt = 450 / (maxVoltage - minVoltage);
-                            updated_VtoA_message = updated_VtoA_message + "\nVoltage-Angle Interpretation Updated";
-                        }
-                    }
-                } else {
-                    rotatorLimitReachedCounter = 0;
-                    updated_VtoA_message = "";
                 }
 
 
@@ -326,7 +301,8 @@ public class SerialService extends Service implements SerialListener {
                             + "\nVoltage: " + pot_voltage
                             + "\nBits: " + pot_bits
                             + updated_VtoA_message
-                            + outOfBoundsMessage;
+                            + outOfBoundsMessage
+                            + randomDebuggingText;
                 Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATS);
                 intent.putExtra(TerminalFragment.RECEIVE_HEADING_EXTRA, headingInfo);
                 LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
@@ -656,6 +632,8 @@ public class SerialService extends Service implements SerialListener {
                 //this is the beginning of a new report event, therefore we assume that
                 // if a packet is pending, it is complete and save it before parsing the most
                 // recent data
+//                randomDebuggingText = "";
+//                randomDebuggingText = randomDebuggingText + "WE GOT A PACKET!!!!!!";
                 if (pendingPacket != null) {
                     FirebaseService.Companion.getServiceInstance().appendFile(pendingPacket.toCSV());
                 }
@@ -672,6 +650,9 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
+
+//                randomDebuggingText = "";
+//                randomDebuggingText = randomDebuggingText + "WE GOT AN ANGLE?????";
 
                 byte[] lastTwoBytes = new byte[2];
                 // Extract the last 2 bytes
