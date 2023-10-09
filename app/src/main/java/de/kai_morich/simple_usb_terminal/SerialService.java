@@ -44,6 +44,7 @@ import java.lang.Math;
  * <p>
  * use listener chain: SerialSocket -> SerialService -> UI fragment
  */
+
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class SerialService extends Service implements SerialListener {
 
@@ -95,6 +96,7 @@ public class SerialService extends Service implements SerialListener {
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
     private static double minAngle = 0.0; // or -50?
     private static double maxAngle = 450.0;
+    public double currentHeading = 0.0;
     private static double headingMin = 75.0;
     private static double headingMax = 395.0;
     private static boolean treatHeadingMinAsMax = false;
@@ -159,7 +161,7 @@ public class SerialService extends Service implements SerialListener {
 
                 TFragJustToSend.send(BGapi.GET_ANGLE);
                 SystemClock.sleep(messageDelay);
-                double currentHeading = pot_angle;
+                currentHeading = pot_angle;
 
                 // Here's a filter!
                 double differenceVoltage = Math.abs(pot_voltage - oldVoltage);
@@ -234,11 +236,11 @@ public class SerialService extends Service implements SerialListener {
                         // turn around once we pass the max
                         if (OutsideUpperBound(currentHeading)) {
                             outOfBoundsCounter ++;
-                            outOfBoundsMessage = outOfBoundsMessage + "out of bounds " + outOfBoundsCounter + "time(s)\n";
+                            outOfBoundsMessage = outOfBoundsMessage + "\nout of bounds " + outOfBoundsCounter + "time(s)";
                             if (outOfBoundsCounter >= 3) {
                                 rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
                                 outOfBoundsCounter = 0;
-                                outOfBoundsMessage = outOfBoundsMessage + "turned around\n";
+                                outOfBoundsMessage = outOfBoundsMessage + "\nturned around";
                             }
                         } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
                             rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
@@ -251,11 +253,11 @@ public class SerialService extends Service implements SerialListener {
                         // turn around once we pass the min
                         if(OutsideLowerBound(currentHeading)) {
                             outOfBoundsCounter ++;
-                            outOfBoundsMessage = outOfBoundsMessage + "out of bounds " + outOfBoundsCounter + "time(s)\n";
+                            outOfBoundsMessage = outOfBoundsMessage + "\nout of bounds " + outOfBoundsCounter + "time(s)";
                             if (outOfBoundsCounter >= 3) {
                                 rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
                                 outOfBoundsCounter = 0;
-                                outOfBoundsMessage = outOfBoundsMessage + "turned around\n";
+                                outOfBoundsMessage = outOfBoundsMessage + "\nturned around";
                             }
                         } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
                             rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
@@ -290,7 +292,7 @@ public class SerialService extends Service implements SerialListener {
 
 
                 //print current info to screen
-                String headingInfo = "currentHeading: "+ currentHeading
+                String headingInfo = "\ncurrentHeading: "+ currentHeading
                             + "\noldHeading: " + oldHeading
                             + "\nmin: " + headingMin + "\nmax: " + headingMax
                             + "\nminAsMax: " + treatHeadingMinAsMax
@@ -637,6 +639,7 @@ public class SerialService extends Service implements SerialListener {
                 if (pendingPacket != null) {
                     FirebaseService.Companion.getServiceInstance().appendFile(pendingPacket.toCSV());
                 }
+
 
                 BlePacket temp = BlePacket.parsePacket(data);
                 //did the new data parse successfully?

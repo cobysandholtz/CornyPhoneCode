@@ -122,7 +122,7 @@ public class DevicesFragment extends ListFragment {
             try {
                 FirebaseService.Companion.getInstance().testUpload("ManualOption");
             } catch (Exception e) {
-                Toast.makeText(getContext(), "Problem uploading: "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Problem uploading: "+e.getMessage(), Toast.LENGTH_LONG).show();
             }
             return true;
         } else {

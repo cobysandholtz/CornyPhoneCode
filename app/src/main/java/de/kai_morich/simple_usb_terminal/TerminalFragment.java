@@ -581,6 +581,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 return;
 
             pendingPacket = BlePacket.parsePacket(data);
+
         } else if (BGapi.isAngleResponse(data)) {
             //parsing out end of data to find voltage/angle
 //            String truncData = "";
