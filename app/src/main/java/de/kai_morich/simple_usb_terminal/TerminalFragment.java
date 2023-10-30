@@ -111,10 +111,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean truncate = true;
     private int rotatePeriod = 500;
     public int logLevel = 10; // this is the default log level
-
     private SharedPreferences sharedPref;
 
     private static TerminalFragment instance;
+
+
 
     public static TerminalFragment getInstance(){
         return instance;
@@ -145,7 +146,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 //system.out.println calls print to Log.info apparently, neat
 //                System.out.println("heading received: "+s);
                 if(receiveText != null){
-                    receiveText.append(s+"\n");
+                    MyLogger.log_v(receiveText, s);
                 }
             }
         }
@@ -167,6 +168,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         portNum = getArguments().getInt("port");
         baudRate = getArguments().getInt("baud");
         SensorHelper.setHeading(0);
+
+        MyLogger.setLogLevel(logLevel);
 
         bManager = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
         IntentFilter filter = new IntentFilter();
@@ -379,7 +382,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         });
 
         //TODO switch to get the filename directly from FirebaseService
-        receiveText.append("Writing to " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")) + "_log.txt" + "\n");
+        MyLogger.log_v(receiveText, "Writing to " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")) + "_log.txt");
 
         return view;
     }
@@ -409,6 +412,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             builder.setTitle("Log level");
             builder.setSingleChoiceItems(logLevels, pos, (dialog, item1) -> {
                 logLevel = Integer.parseInt(logLevels[item1]);
+                MyLogger.setLogLevel(logLevel);
                 dialog.dismiss();
             });
             builder.create().show();
@@ -542,7 +546,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     /**
      * Send a String to the currently connected serial device. Returns immediately if no
-     * device is connected. Additionally appends the sent information to the text on screen
+     * device is connected. Additionally appends the sent information to the text on screen.
+     *
+     * This is mostly used for things that are sent as the result of direct user interaction,
+     * so it assumed that we will always want the commands to be displayed. Thus this uses receiveText
+     * directly instead of Mylogger.log_X() as all automatically sent commands should.
      * */
     public void send(String str) {
         if (connected != Connected.True) {
