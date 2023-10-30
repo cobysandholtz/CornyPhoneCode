@@ -110,7 +110,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean initialStart = true;
     private boolean truncate = true;
     private int rotatePeriod = 500;
-    private int logLevel = 10; // this is the default log level
+    public int logLevel = 10; // this is the default log level
 
     private SharedPreferences sharedPref;
 
