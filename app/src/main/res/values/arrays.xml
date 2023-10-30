@@ -7,6 +7,13 @@
         <item>57600</item>
         <item>115200</item>
     </string-array>
+    <string-array name="log_levels">
+        <item>10</item>
+        <item>20</item>
+        <item>30</item>
+        <item>40</item>
+        <item>50</item>
+    </string-array>
     <string-array name="newline_names">
         <item>CR+LF</item>
         <item>LF</item>
