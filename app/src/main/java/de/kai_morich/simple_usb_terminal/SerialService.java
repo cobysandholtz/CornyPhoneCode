@@ -345,7 +345,6 @@ public class SerialService extends Service implements SerialListener {
         @Override
         public void run() {
 
-            try {
             if (connected) {
 
                 send(BGapi.GET_ANGLE);
@@ -539,14 +538,9 @@ public class SerialService extends Service implements SerialListener {
                 }
             }
 
-                //As long as we are to continue moving, schedule this method to be run again
-                if (isMotorRunning) {
-                    motorHandler.postDelayed(this, motorSleepTime);
-                }
-
-            } catch (IOException e) {
-                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-                e.printStackTrace();
+            //As long as we are to continue moving, schedule this method to be run again
+            if (isMotorRunning) {
+                motorHandler.postDelayed(this, motorSleepTime);
             }
 
 
