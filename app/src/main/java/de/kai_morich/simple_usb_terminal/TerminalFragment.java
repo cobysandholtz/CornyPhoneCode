@@ -112,6 +112,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private boolean initialStart = true;
     private boolean truncate = true;
     private int rotatePeriod = 500;
+    private int logLevel = 10; // this is the default log level
 
     private SharedPreferences sharedPref;
 
@@ -391,6 +392,17 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             return true;
         } else if (id == R.id.manualUpload) {
             FirebaseService.Companion.getInstance().uploadLog();
+            return true;
+        } else if (id == R.id.logSelect) {
+            final String[] logLevels = getResources().getStringArray(R.array.log_levels);
+            int pos = java.util.Arrays.asList(logLevels).indexOf(String.valueOf(logLevel));
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setTitle("Log level");
+            builder.setSingleChoiceItems(logLevels, pos, (dialog, item1) -> {
+                logLevel = Integer.parseInt(logLevels[item1]);
+                dialog.dismiss();
+            });
+            builder.create().show();
             return true;
         } else if (id == R.id.truncate) {
             truncate = !truncate;

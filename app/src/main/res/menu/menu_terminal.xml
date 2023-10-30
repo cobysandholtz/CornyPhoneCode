@@ -30,6 +30,9 @@
     <!--        android:title="Send BREAK"-->
     <!--        app:showAsAction="never" />-->
     <item
+        android:id="@+id/logSelect"
+        android:title="Select Logs" />
+    <item
         android:id="@+id/manualUpload"
         android:title="Force Upload Log" />
     <item
