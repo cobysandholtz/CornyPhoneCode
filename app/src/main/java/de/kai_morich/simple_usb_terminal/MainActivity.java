@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.os.StrictMode;
 import android.provider.Settings;
 import android.text.InputType;
 import android.view.Menu;
@@ -72,28 +73,44 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //helps with debugging "Resource Failed to Close" log message (which turned out to be too arcane to be worth worrying about)
+        // see https://stackoverflow.com/questions/66620246/a-resource-failed-to-call-close
+//        StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder(StrictMode.getVmPolicy())
+//                .detectLeakedClosableObjects()
+//                .build());
+
         //following line will keep the screen active
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // creates a ui element toolbar and sets the action
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        // adds listener for when you press the back button and it needs to decide where to go
         getSupportFragmentManager().addOnBackStackChangedListener(this);
 
+        // starts service to inteface with magnetometer and accelerometer
         startService(new Intent(this, SensorHelper.class));
+
+        // starts processes for firebase uploading and starting serial service
         WorkerWrapper.startFirebaseWorker(getApplicationContext());
         WorkerWrapper.startSerialWorker(getApplicationContext());
+
 
         locationPermissionRequest.launch(new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
         });
 
+        // passes gps location around to where it is needed
        locationHelper = new LocationHelper(this);
        locationHelper.startLocationUpdates();
 
         FirebaseStorage storage = FirebaseStorage.getInstance();
         storageRef = storage.getReference();
 
+        //Create new device fragment if one doesn't exist
         if (savedInstanceState == null)
             getSupportFragmentManager().beginTransaction().add(R.id.fragment, new DevicesFragment(), "devices").commit();
         else
@@ -196,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
 
     @Override
     public void onDestroy(){
+        //todo: why are these commented out?
 //        stopService(new Intent(this, FirebaseService.class));
 //        stopService(new Intent(this, SerialService.class));
         super.onDestroy();

@@ -53,8 +53,6 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -118,6 +116,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private static TerminalFragment instance;
 
+
+
     public static TerminalFragment getInstance(){
         return instance;
     }
@@ -144,9 +144,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(RECEIVE_HEADING_STATS)){
                 String s = intent.getExtras().getString(RECEIVE_HEADING_EXTRA);
-                System.out.println("heading received: "+s);
+                //system.out.println calls print to Log.info apparently, neat
+//                System.out.println("heading received: "+s);
                 if(receiveText != null){
-                    receiveText.append(s+"\n");
+                    MyLogger.log_v(receiveText, s);
                 }
             }
         }
@@ -168,6 +169,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         portNum = getArguments().getInt("port");
         baudRate = getArguments().getInt("baud");
         SensorHelper.setHeading(0);
+
+        MyLogger.setLogLevel(logLevel);
 
         bManager = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
         IntentFilter filter = new IntentFilter();
@@ -275,18 +278,22 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         receiveText.setTextColor(getResources().getColor(R.color.colorRecieveText)); // set as default color to reduce number of spans
         receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
 
+
+        //setup the 'setup' button
         View setupBtn = view.findViewById(R.id.setup_btn);
         setupBtn.setOnClickListener(this::onSetupClicked);
 
+        //setup the stop upload button
         View stopUploadBtn = view.findViewById(R.id.stop_upload_btn);
         stopUploadBtn.setOnClickListener(btn -> {
-            Toast.makeText(getContext(), "click!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Upload Stop Button Pressed!", Toast.LENGTH_LONG).show();
             Intent stopIntent = new Intent(getContext(), FirebaseService.ActionListener.class);
             stopIntent.setAction(FirebaseService.KEY_NOTIFICATION_STOP_ACTION);
             stopIntent.putExtra(FirebaseService.KEY_NOTIFICATION_ID, ServiceNotification.notificationId);
             FirebaseService.Companion.getInstance().sendBroadcast(stopIntent);
         });
 
+        //setup the stop motor button
         SwitchCompat stopMotorBtn = view.findViewById(R.id.stop_motor_btn);
         stopMotorBtn.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Intent stopMotorIntent = new Intent(getContext(), SerialService.ActionListener.class);
@@ -295,6 +302,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             SerialService.getInstance().sendBroadcast(stopMotorIntent);
         });
 
+        //setup the heading slider
         headingSlider = view.findViewById(R.id.slider);
         //load the min/max from local storage
         sharedPref = getContext().getSharedPreferences(PREFERENCE_FILE, Context.MODE_PRIVATE);
@@ -304,6 +312,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         headingSlider.setValues(Arrays.asList(headingMin, headingMax));
         headingSlider.addOnChangeListener((rangeSlider, value, fromUser) -> {
             Activity activity = getActivity();
+
+            //setup broadcasting the values from the headings slider to any broadcastReciever
             if(activity instanceof MainActivity){
                 //broadcast the new values to SerialService
                 Intent headingRangeIntent = new Intent(getContext(), SerialService.ActionListener.class);
@@ -315,6 +325,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
         });
 
+        //setup the toggle heading button
         SwitchCompat toggleHeadingBtn = view.findViewById(R.id.heading_range_toggle);
         toggleHeadingBtn.setOnCheckedChangeListener((buttonView, isChecked) -> {
             Activity activity = getActivity();
@@ -333,9 +344,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             }
         });
 
+        //setup start scan button
         View startBtn = view.findViewById(R.id.start_btn);
         startBtn.setOnClickListener(this::onStartClicked);
 
+        //setup stop scan button
         View stopBtn = view.findViewById(R.id.stop_btn);
         stopBtn.setOnClickListener(v -> send(BGapi.SCANNER_STOP));
 
@@ -370,7 +383,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         });
 
         //TODO switch to get the filename directly from FirebaseService
-        receiveText.append("Writing to " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")) + "_log.txt" + "\n");
+        MyLogger.log_v(receiveText, "Writing to " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm_ss")) + "_log.txt");
 
         return view;
     }
@@ -400,6 +413,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             builder.setTitle("Log level");
             builder.setSingleChoiceItems(logLevels, pos, (dialog, item1) -> {
                 logLevel = Integer.parseInt(logLevels[item1]);
+                MyLogger.setLogLevel(logLevel);
                 dialog.dismiss();
             });
             builder.create().show();
@@ -533,7 +547,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     /**
      * Send a String to the currently connected serial device. Returns immediately if no
-     * device is connected. Additionally appends the sent information to the text on screen
+     * device is connected. Additionally appends the sent information to the text on screen.
+     *
+     * This is mostly used for things that are sent as the result of direct user interaction,
+     * so it assumed that we will always want the commands to be displayed. Thus this uses receiveText
+     * directly instead of Mylogger.log_X() as all automatically sent commands should.
      * */
     public void send(String str) {
         if (connected != Connected.True) {
@@ -564,11 +582,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     }
 
     /**
-     * Parse the bytes that were received from the serial device. If those bytes are recognized
-     * as a message that is part of BGAPI, prints the message name rather than the bytes
-     * If the message is a packet, parse it into a packet object
+     * Parse the bytes from SerialService and prints them in readable format to the phone screen.
+     * If those bytes are recognized as a message that is part of BGAPI, prints the message name
+     * rather than the bytes.
+     * If the packet isn't of any recognizable type, currently just dumps the raw output to screen?
      * */
-    private void receive(byte[] data) {
+    private void displayToTerminal(byte[] data) {
 //        SpannableStringBuilder span = new SpannableStringBuilder("##"+TextUtil.toHexString(data)+"\n");
 //        span.setSpan(new ForegroundColorSpan(Color.CYAN), 0, span.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 //        receiveText.append("\n\nNEW THING!!!\n" + span);
@@ -623,8 +642,24 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 receiveText.append(BGapi.getResponseName(data) + '\n');
         } else {
             //until the data has a terminator, assume packets that aren't a known header are data that was truncated
-            if (pendingPacket != null)
+            if (pendingPacket != null) {
                 pendingPacket.appendData(data);
+                pendingPacket = BlePacket.parsePacket(data);
+                if (pendingPacket != null) {
+                    String msg = pendingPacket.toString();
+                    if (truncate) {
+                        int length = msg.length();
+                        if (length > msg.lastIndexOf('\n') + 40) {
+                            length = msg.lastIndexOf('\n') + 40;
+                        }
+                        msg = msg.substring(0, length) + "…";
+                    }
+                    SpannableStringBuilder spn = new SpannableStringBuilder(msg + "\n\n");
+                    spn.setSpan(new ForegroundColorSpan(Color.MAGENTA), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    receiveText.append(spn);
+                }
+//                receiveText.append(data + BGapi.getResponseName(data) + '\n');
+            }
         }
 
         //If the text in receiveText is getting too large to be reasonable, cut it off
@@ -650,7 +685,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     //region SerialListener
 
-
+    //uses a Handler, which is passed a Runnable to send the start command a specified delay after connecting
     @Override
     public void onSerialConnect() {
         status("connected");
@@ -660,9 +695,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         //Runnable clickSetup = () -> onSetupClicked(null); // makes the baud rate array show up
         //handler.postDelayed(clickSetup, 2500);
         Runnable clickStart = () -> onStartClicked(null);
+        //todo: why do we need to wait this long before starting?
         handler.postDelayed(clickStart, 2700);
     }
 
+    //todo: replace bandaid with more permanent solution
     @Override
     public void onSerialConnectError(Exception e) {
         status("connection failed: " + e.getMessage());
@@ -673,7 +710,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     @Override
     public void onSerialRead(byte[] data) {
-        receive(data);
+        displayToTerminal(data);
     }
 
     @Override
