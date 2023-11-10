@@ -182,61 +182,59 @@ public class SerialService extends Service implements SerialListener {
 
                 case MOVING_RIGHT:
                     if (rotationCounter > ROTATION_COUNTER_THRESHOLD) {
-                        rotateDirectionCommand = BGapi.ROTATE_STOP;
                         rotationCounter = 0;
                         newRotationState = NewRotationState.STOPPED_RIGHT;
                     }
                     break;
 
                 case STOPPED_RIGHT:
+                    print_to_terminal(newRotationState.name());
                     if (current_angle > headingMax) {
                         newRotationState = NewRotationState.TOO_FAR_RIGHT;
                         stoppedCounter = 0;
                     } else if (stoppedCounter > STOPPED_COUNTER_THRESHOLD) {
-                        rotateDirectionCommand = BGapi.ROTATE_FAST;
                         stoppedCounter = 0;
                         newRotationState = NewRotationState.MOVING_RIGHT;
                     }
                     break;
 
+                case TOO_FAR_RIGHT:
+                    //if our out-of-bounds measurement was an error, go back to rotating right
+                    //todo: should we increment outOfBoundsCounter if a bad reading causes us to go back?
+                    if (current_angle < headingMax) {
+                        newRotationState = NewRotationState.MOVING_RIGHT;
+                    } else {
+                        if (outOfBoundsCounter > OUT_OF_BOUNDS_COUNTER_THRESHOLD) {
+                            newRotationState = NewRotationState.MOVING_LEFT;
+                            outOfBoundsCounter = 0;
+                        }
+                    }
+                    break;
+
                 case MOVING_LEFT:
                     if (rotationCounter > ROTATION_COUNTER_THRESHOLD) {
-                        rotateDirectionCommand = BGapi.ROTATE_STOP;
                         rotationCounter = 0;
                         newRotationState = NewRotationState.STOPPED_LEFT;
                     }
                     break;
 
                 case STOPPED_LEFT:
+                    print_to_terminal(newRotationState.name());
                     if (current_angle < headingMin) {
                         newRotationState = NewRotationState.TOO_FAR_LEFT;
                         stoppedCounter = 0;
                     } else if (stoppedCounter > STOPPED_COUNTER_THRESHOLD) {
-                        rotateDirectionCommand = BGapi.ROTATE_FAST;
                         stoppedCounter = 0;
                         newRotationState = NewRotationState.MOVING_LEFT;
                     }
                     break;
-                case TOO_FAR_RIGHT:
-                    //if our out-of-bounds measurement was an error, go back to rotating right
-                    //todo: should we reset outOfBoundsCounter if a bad reading causes us to go back?
-                    if (current_angle < headingMax) {
-                        newRotationState = NewRotationState.MOVING_RIGHT;
-                    } else {
-                        if (outOfBoundsCounter > OUT_OF_BOUNDS_COUNTER_THRESHOLD) {
-                            newRotationState = NewRotationState.MOVING_LEFT;
-                            rotateDirectionCommand = BGapi.ROTATE_CCW;
-                            outOfBoundsCounter = 0;
-                        }
-                    }
-                    break;
+
                 case TOO_FAR_LEFT:
                     if (current_angle > headingMin) {
                         newRotationState = NewRotationState.MOVING_LEFT;
                     } else {
                         if (outOfBoundsCounter > OUT_OF_BOUNDS_COUNTER_THRESHOLD) {
                             newRotationState = NewRotationState.MOVING_RIGHT;
-                            rotateDirectionCommand = BGapi.ROTATE_CW;
                             outOfBoundsCounter = 0;
                         }
                     }
@@ -247,7 +245,6 @@ public class SerialService extends Service implements SerialListener {
                         //do some check
                     } else {
                         newRotationState = NewRotationState.MOVING_LEFT;
-                        rotateDirectionCommand = BGapi.ROTATE_CCW;
                     }
                     break;
 
@@ -262,65 +259,29 @@ public class SerialService extends Service implements SerialListener {
         //on the left and 445 degrees on the right.
         switch (newRotationState) {
             case MOVING_RIGHT:
-                if (rotationCounter == 0) {
-                    rotateDirectionCommand = BGapi.ROTATE_FAST;
-                } else {
-                    rotateDirectionCommand = BGapi.ROTATE_CW;
-                }
+                rotateDirectionCommand = BGapi.ROTATE_CW;
                 rotationCounter++;
-                break;
-
-            case STOPPED_RIGHT:
-                stoppedCounter++;
-                rotateDirectionCommand = BGapi.ROTATE_STOP;
-                break;
-
-            case TOO_FAR_RIGHT:
-                outOfBoundsCounter++;
-//                if (rotationCounter == 0) {
-//                    rotateDirectionCommand = BGapi.ROTATE_FAST;
-//                } else if (rotationCounter < ROTATION_COUNTER_THRESHOLD) {
-//                    rotateDirectionCommand = BGapi.ROTATE_CW;
-//                } else if (rotationCounter >= ROTATION_COUNTER_THRESHOLD) {
-//                    rotateDirectionCommand = BGapi.ROTATE_STOP;
-//                }
-//                if (rotationCounter >= STOPPED_COUNTER_THRESHOLD) {
-//                    rotationCounter = 0;
-//                    rotateDirectionCommand = BGapi.ROTATE_FAST;
-//                }
                 break;
 
             case MOVING_LEFT:
-                if (rotationCounter == 0) {
-                    rotateDirectionCommand = BGapi.ROTATE_FAST;
-                } else {
-                    rotateDirectionCommand = BGapi.ROTATE_CCW;
-                }
+                rotateDirectionCommand = BGapi.ROTATE_CCW;
                 rotationCounter++;
                 break;
+
+            case TOO_FAR_RIGHT:
+
+            case TOO_FAR_LEFT:
+                outOfBoundsCounter++;
+
+            case STOPPED_RIGHT:
 
             case STOPPED_LEFT:
                 stoppedCounter++;
                 rotateDirectionCommand = BGapi.ROTATE_STOP;
                 break;
 
-            case TOO_FAR_LEFT:
-                outOfBoundsCounter++;
-//                if (rotationCounter == 0) {
-//                    rotateDirectionCommand = BGapi.ROTATE_FAST;
-//                } else if (rotationCounter < ROTATION_COUNTER_THRESHOLD) {
-//                    rotateDirectionCommand = BGapi.ROTATE_CCW;
-//                } else if (rotationCounter >= ROTATION_COUNTER_THRESHOLD) {
-//                    rotateDirectionCommand = BGapi.ROTATE_STOP;
-//                }
-//                if (rotationCounter >= STOPPED_COUNTER_THRESHOLD) {
-//                    rotationCounter = 0;
-//                    rotateDirectionCommand = BGapi.ROTATE_FAST;
-//                }
-                break;
-
             case STOPPED:
-                //do something here
+                rotateDirectionCommand = BGapi.ROTATE_STOP;
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + newRotationState);
@@ -328,7 +289,9 @@ public class SerialService extends Service implements SerialListener {
         if (rotateDirectionCommand != null) {
             send(rotateDirectionCommand);
         }
-//        send(BGapi.ROTATE_FAST);
+
+//        print_to_terminal(newRotationState.name());
+
     }
 
     //todo: figure out how to just pass things directly to the terminalFragment to print
@@ -533,8 +496,8 @@ public class SerialService extends Service implements SerialListener {
 //                FirebaseService.Companion.getServiceInstance().appendHeading(
 //                        currentHeading, headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
                     //save rotation status to firebase log
-                    FirebaseService.Companion.getServiceInstance().appendHeading(
-                            currentHeading, headingMin, headingMax, treatHeadingMinAsMax, newRotationState.toString());
+//                    FirebaseService.Companion.getServiceInstance().appendHeading(
+//                            currentHeading, headingMin, headingMax, treatHeadingMinAsMax, newRotationState.toString());
                 }
             }
 
@@ -872,6 +835,8 @@ public class SerialService extends Service implements SerialListener {
                 // recent data
 //                randomDebuggingText = "";
 //                randomDebuggingText = randomDebuggingText + "WE GOT A PACKET!!!!!!";
+                String length_str = String.valueOf(data.length);
+                print_to_terminal(length_str);
                 if (pendingPacket != null) {
                     FirebaseService.Companion.getServiceInstance().appendFile(pendingPacket.toCSV());
                 }
@@ -886,11 +851,12 @@ public class SerialService extends Service implements SerialListener {
                     //No - save the raw bytes
                     pendingBytes = data;
                 }
+//                print_to_terminal(String.valueOf(pendingBytes.length));
 
             } else if (BGapi.isAngleResponse(data)) {
                 byte[] lastTwoBytes = new byte[2];
                 // Extract the last 2 bytes
-                System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2);
+                System.arraycopy(data, 13, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
 
                 // Extract the most significant 12 bits into an integer
                 pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
