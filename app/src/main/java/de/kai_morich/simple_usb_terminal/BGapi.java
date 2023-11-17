@@ -71,19 +71,20 @@ public class BGapi {
         //updated to reflect new extended advertisement report logic. Not totally sure why byte-by-
         //byte comparison is done, just following existing style for now.
         //
-        return bytes.length > 3 && bytes[0] == (byte) 0xA1 && bytes[1] == 0x00
-                && bytes[2] == 0x05 && bytes[3] == 0x02;
+        return bytes.length > 3 && bytes[0] == (byte) 0xA0 && bytes[1] == (byte) 0xF7
+                && bytes[2] == 0x05 && bytes[3] == 0x01;
     }
 
     public static boolean isAngleResponse(byte[] bytes) {
 
         return bytes[0] == 0x20 //stupid, but I know it'll work based on the above
-                && bytes[1] == 0x07
+                && bytes[1] == 0x04
                 && bytes[2] == (byte) 0xFF
                 && bytes[3] == 0x00
                 && bytes[4] == 0x00
                 && bytes[5] == 0x00
-                && bytes[6] == 0x04;
+                && bytes[6] == 0x01
+                && bytes[7] == 0x06;
     }
 
     public static boolean isTemperatureResponse(byte[] bytes) {
