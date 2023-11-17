@@ -856,7 +856,7 @@ public class SerialService extends Service implements SerialListener {
             } else if (BGapi.isAngleResponse(data)) {
                 byte[] lastTwoBytes = new byte[2];
                 // Extract the last 2 bytes
-                System.arraycopy(data, 13, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
+                System.arraycopy(data, data.length, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
 
                 // Extract the most significant 12 bits into an integer
                 pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
