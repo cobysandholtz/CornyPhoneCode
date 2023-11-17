@@ -77,14 +77,11 @@ public class BGapi {
 
     public static boolean isAngleResponse(byte[] bytes) {
 
-        return bytes[0] == 0x20 //stupid, but I know it'll work based on the above
-                && bytes[1] == 0x04
+        return bytes[0] == (byte) 0xA0 //stupid, but I know it'll work based on the above
+                && bytes[1] == 0x03
                 && bytes[2] == (byte) 0xFF
                 && bytes[3] == 0x00
-                && bytes[4] == 0x00
-                && bytes[5] == 0x00
-                && bytes[6] == 0x01
-                && bytes[7] == 0x06;
+                && bytes[4] == 0x02;
     }
 
     public static boolean isTemperatureResponse(byte[] bytes) {

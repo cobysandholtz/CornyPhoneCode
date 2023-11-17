@@ -579,11 +579,20 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
-                float angle_voltage = data[data.length - 2]; //last 4 bytes of response contain voltage payload
-                pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
+                byte[] lastTwoBytes = new byte[2];
+//             Extract the last 2 bytes
+                System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
+
+//             Extract the most significant 12 bits into an integer
+                int pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+
+//             multiply by 1/2^12 (adc resolution)
+                float pot_voltage = (float) (pot_bits * 0.002);
+
                 //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
                 //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
                 //with the offset depending on how we want to deal with wrapping around 0
+                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
 
                 //** CLOCKWISE = higher voltage, counterclockwise = lower voltage
 

@@ -572,12 +572,22 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             pendingPacket = BlePacket.parsePacket(data);
         } else if (BGapi.isAngleResponse(data)) {
-            float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
-            String hexVal = Float.toHexString(angle_voltage);
+            byte[] lastTwoBytes = new byte[2];
+//             Extract the last 2 bytes
+            System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
 
-            float pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
-            SensorHelper.setHeading(pot_angle);
-            receiveText.append("Got angle: " + pot_angle + '\n' + "Hex Value: " + hexVal + '\n');
+//             Extract the most significant 12 bits into an integer
+            int pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+
+//             multiply by 1/2^12 (adc resolution)
+             float pot_voltage = (float) (pot_bits * 0.002);
+
+//            converts voltage to angle based on calibrated min and max values
+//            before min and max values have been run into and measured, uses pre-measured values
+            float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+
+            receiveText.append("Angle: " + pot_angle + '\t' +"voltage: " + pot_voltage + "\t" + "Hex: " + pot_bits + '\n');
+//            receiveText.append("Got angle measurement\n");
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
             SpannableStringBuilder tempSpan = new SpannableStringBuilder("Got temp: "+temperature+"\n");
