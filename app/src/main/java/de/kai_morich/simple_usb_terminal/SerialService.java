@@ -114,6 +114,14 @@ public class SerialService extends Service implements SerialListener {
     }
 
 
+    private Handler motorStopHandler = new Handler(); //todo: needs to be declared with looper like the others?
+//    private final Runnable motorStopRunnable = new Runnable() {
+//        @Override
+//        public void run() {
+
+//        }
+//    };
+
     // The packaged code sample that moves the motor and checks if it is time to turn around
     private final Runnable rotateRunnable = new Runnable() {
 
@@ -124,19 +132,28 @@ public class SerialService extends Service implements SerialListener {
                 if (connected) {
 
                     double oldHeading = SensorHelper.getHeading();
-                    String rotateCommand;
+                    String rotateCommand = BGapi.ROTATE_STOP;
                     if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
                         rotateCommand = BGapi.ROTATE_CW;
                     else
                         rotateCommand = BGapi.ROTATE_CCW;
 
+                    //start rotation
                     write(TextUtil.fromHexString(rotateCommand));
-                    SystemClock.sleep(motorRotateTime);
-                    write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+
+                    //wait motorRotateTime, then stop rotation
+                    motorHandler.postDelayed(() -> {
+                        try {
+                            write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, motorRotateTime);
 
 
                     //previous code to swivel the motor indefinitely
-                    double currentHeading = SensorHelper.getHeading(); //+180;
+//                    double currentHeading = SensorHelper.getHeading(); //+180;
+                    double currentHeading = pot_angle;
                     if (treatHeadingMinAsMax) { //valid range goes through 0, such as 270->30
                         //where --- is out of bounds, ==== is in bounds,
                         //and >-> or <-< marks the current heading and direction
@@ -292,7 +309,7 @@ public class SerialService extends Service implements SerialListener {
 
         instance = this;
 
-        startMotorHandler();
+        startRotationHandler();
         startTemperatureHandler();
     }
 
@@ -312,7 +329,7 @@ public class SerialService extends Service implements SerialListener {
     /**
      * Create the Handler that will regularly call the code in rotateRunnable
      */
-    private void startMotorHandler() {
+    private void startRotationHandler() {
         Looper looper = Looper.myLooper();
         if (looper != null) {
             motorHandler = new Handler(looper);
@@ -562,7 +579,7 @@ public class SerialService extends Service implements SerialListener {
 
             } else if (BGapi.isAngleResponse(data)) {
                 //todo: this comes in from the gecko bigendian, might need to swap around
-                float angle_voltage = data[data.length - 4]; //last 4 bytes of response contain voltage payload
+                float angle_voltage = data[data.length - 2]; //last 4 bytes of response contain voltage payload
                 pot_angle = (float) (((angle_voltage - 0.332) / (2.7 - 0.332)) * 360);
                 //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
                 //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
@@ -678,7 +695,7 @@ public class SerialService extends Service implements SerialListener {
                 if (intent.getAction().equals(KEY_STOP_MOTOR_ACTION)) {
                     isMotorRunning = intent.getBooleanExtra(KEY_MOTOR_SWITCH_STATE, false);
                     if (isMotorRunning) {
-                        SerialService.getInstance().startMotorHandler();
+                        SerialService.getInstance().startRotationHandler();
                     }
                 } else if (intent.getAction().equals(KEY_HEADING_RANGE_ACTION)) {
                     float[] headingLimits = intent.getFloatArrayExtra(KEY_HEADING_RANGE_STATE);
