@@ -159,7 +159,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 String formattedAngle = "Angle: " + String.format("%-7.1f", angle);
                 angleDisplayText.setText(formattedAngle);
                 rotationStateDisplayText.setText(state);
-                System.out.println("heading received: "+ angle);
+//                System.out.println("heading received: "+ angle);
             } else if (intent.getAction().equals(GENERAL_PURPOSE_PRINT)) {
                 s = intent.getExtras().getString(GENERAL_PURPOSE_STRING);
                 System.out.println(s);

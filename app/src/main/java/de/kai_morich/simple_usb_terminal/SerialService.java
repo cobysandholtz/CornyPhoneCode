@@ -101,6 +101,10 @@ public class SerialService extends Service implements SerialListener {
     private static SerialService instance;
     public static float pot_angle;
 
+    public static String lastCommand;
+
+    private static long lastEventTime = -1;
+
     public static final String KEY_STOP_MOTOR_ACTION = "SerialService.stopMotorAction";
     public static final String KEY_MOTOR_SWITCH_STATE = "SerialService.motorSwitchState";
     public static final String KEY_HEADING_RANGE_ACTION = "SerialService.headingRangeAction";
@@ -172,6 +176,8 @@ public class SerialService extends Service implements SerialListener {
                     else
                         rotateCommand = BGapi.ROTATE_CCW;
 
+                    lastCommand = rotateCommand;
+
                     //start rotation
                     write(TextUtil.fromHexString(rotateCommand));
 
@@ -179,6 +185,7 @@ public class SerialService extends Service implements SerialListener {
                     motorHandler.postDelayed(() -> {
                         try {
                             write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+                            lastCommand = BGapi.ROTATE_STOP;
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
@@ -613,7 +620,20 @@ public class SerialService extends Service implements SerialListener {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } else if (!BGapi.isKnownResponse(data)) {
+            } else if("message_rotate_ccw_rsp".equals(BGapi.getResponseName(data))) {
+              if (lastCommand != BGapi.ROTATE_CCW) {
+                  if (lastEventTime < 0) {
+                      lastEventTime = System.currentTimeMillis();
+                      System.out.print("ERROR: unexpected Rotate CCW rsp received for the first time\n");
+                  } else {
+                      long timeElapsed = System.currentTimeMillis() - lastEventTime;
+                      lastEventTime = System.currentTimeMillis();
+                      System.out.print("ERROR: unexpected Rotate CCW rsp received after " + timeElapsed/1000 + " seconds\n");
+                  }
+
+              }
+            }
+            else if (!BGapi.isKnownResponse(data)) {
                 //If the data isn't any kind of thing we can recognize, assume it's incomplete
 
                 //If there's already partial data waiting

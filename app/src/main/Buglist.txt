@@ -1,0 +1,7 @@
+
+-Rotator keeps going past upper bound until it gets stuck at 400 degrees (also, doesn't that angle measure imply that we'll be in negative if we rotate past 0?)
+- RSSI and channel from received packets aren't parsed properly (probably fixed)
+-After an unspecified amount of time with autoRotate toggled off, the receiver will spontaneously start rotating counterclockwise and won't stop until you force it to in some way
+-Some slight kinks in the rotation state machine to be ironed out
+-Recovery from disconnect errors needs to be implemented as a safeguard
+-All errors and exceptions should get written to a file so that we can debug things after a long period of time (just pipe logcat out?)

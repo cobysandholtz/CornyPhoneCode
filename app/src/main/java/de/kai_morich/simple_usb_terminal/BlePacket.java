@@ -62,24 +62,20 @@ public class BlePacket {
      *
      * @return the newly created packet, or null if bytes was too short*/
     public static BlePacket parsePacket(byte[] bytes) {
+        // https://docs.silabs.com/bluetooth/6.2.0/bluetooth-stack-api/sl-bt-evt-scanner-extended-advertisement-report-s
         // scanner_evt_extended_advertisement_report ->
-        // A01B 0502    BGAPI identifier
-        // 00           event_flags
-        // E7 2B43 23A4 60 bd_addr
-        // 00           addr_type
-        // FF           bonding
-        // A5           rssi
-        // 26           channel
-        // 00 0000 0000 00 target_addr
-        // 00           target_addr_type
-        // FF           adv_sid
-        // 04           primary_phy
-        // 01           secondary_phy
-        // 7F           tx_power
-        // 0000         periodic interval
-        // 00           data completeness
-        // D3           counter
-        // ...          data
+//        A0 F7 05 01 83
+//        address - 52 9D B5 5E 39 90
+//        address type - 00
+//        bonding - FF
+//        primary phy - 04
+//        secondary phy - 04
+//        adv_sid - 00
+//        TX power -7F
+//        RSSI -C8
+//        Channel - 04
+//        periodic interval - 00
+//        00 E5
 
 
 
@@ -91,8 +87,8 @@ public class BlePacket {
         }
         addr = addr.substring(0, addr.length() - 1);
         byte packet_type = 0;
-        byte rssi = bytes[13];
-        byte channel = bytes[14];
+        byte rssi = bytes[17];
+        byte channel = bytes[18];
 
         byte[] data = Arrays.copyOfRange(bytes, 31, bytes.length);
         return new BlePacket(addr, rssi, channel, packet_type, data);

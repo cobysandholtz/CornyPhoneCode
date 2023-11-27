@@ -1,0 +1,5 @@
+To be updated after every work session. then copy and paste the updated part and send to Dr. Mazzeo in the teams chat.
+
+November 27, 2023
+-updated scan report parsing so that RSSI is now reported accurately
+-added check for incorrect CCW rotation responses with timer
