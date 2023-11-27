@@ -258,28 +258,28 @@ public class SerialService extends Service implements SerialListener {
 
         // for treatHeadingMinAsMax == false
         private boolean InsideBounds(double heading) {
-            if(heading <= headingMax && heading >= headingMin) { return true; } else { return false; }
+            return (heading <= headingMax && heading >= headingMin);
         }
 
         private boolean OutsideLowerBound(double heading) {
-            if(heading >= 0 && heading < headingMin) {return true; } else { return false; }
+            return (heading >= 0 && heading < headingMin);
         }
 
         private boolean OutsideUpperBound(double heading) {
-            if(heading > headingMax && heading < 360) {return true; } else { return false; }
+            return (heading > headingMax && heading < 360);
         }
 
         // for treatHeadingMinAsMax == true
         private boolean InsideUpperBound(double heading) {
-            if(heading >= headingMax && heading < 360) {return true; } else { return false; }
+            return (heading >= headingMax && heading < 360);
         }
 
         private boolean InsideLowerBound(double heading) {
-            if(heading >= 0 && heading <= headingMin) {return true; } else { return false; }
+            return (heading >= 0 && heading <= headingMin);
         }
 
         private boolean OutsideBounds(double heading) {
-            if(heading > headingMin && heading < headingMax) {return true; } else { return false; }
+            return(heading > headingMin && heading < headingMax);
         }
 
     };

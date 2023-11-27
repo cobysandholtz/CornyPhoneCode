@@ -25,8 +25,8 @@ public class BGapi {
         knownResponses.put("scanner_stop_rsp", new byte[]{0x20, 0x02, 0x05, 0x05, 0x00, 0x00});
         knownResponses.put("message_rotate_slow_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x01});
         knownResponses.put("message_rotate_fast_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x02});
-        knownResponses.put("message_rotate_cw_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x04});
-        knownResponses.put("message_rotate_ccw_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x03});
+        knownResponses.put("message_rotate_cw_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x03});
+        knownResponses.put("message_rotate_ccw_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x04});
         knownResponses.put("message_rotate_stop_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x05});
         knownResponses.put("message_read_angle_rsp", new byte[]{0x20, 0x04, (byte) 0xFF, 0x00, 0x00, 0x00, 0x01, 0x06});
         knownResponses.put("message_user_to_target_rsp", new byte[]{0x20, 0x03, (byte) 0xFF, 0x00, 0x01, 0x00, 0x00});
@@ -41,8 +41,8 @@ public class BGapi {
         commands.put("scanner_stop", "20000505");
         commands.put("message_rotate_slow", "2002FF000101");//this is toggle PWM_LOW
         commands.put("message_rotate_fast", "2002FF000102");//this is toggle PWM_HIGH
-        commands.put("message_rotate_cw", "2002FF000104");//this is move MTR_RIGHT
-        commands.put("message_rotate_ccw", "2002FF000103");//this is move MTR_LEFT
+        commands.put("message_rotate_cw", "2002FF000103");//this is move MTR_RIGHT
+        commands.put("message_rotate_ccw", "2002FF000104");//this is move MTR_LEFT
         commands.put("message_rotate_stop", "2002FF000105");//this is PWM_OFF
         commands.put("message_read_pot_angle", "2002FF000106");
         commands.put("message_get_temp", "2002FF000104");
@@ -77,7 +77,7 @@ public class BGapi {
 
     public static boolean isAngleResponse(byte[] bytes) {
 
-        return bytes[0] == (byte) 0xA0 //stupid, but I know it'll work based on the above
+        return bytes.length > 4 && bytes[0] == (byte) 0xA0 //stupid, but I know it'll work based on the above
                 && bytes[1] == 0x03
                 && bytes[2] == (byte) 0xFF
                 && bytes[3] == 0x00
