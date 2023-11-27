@@ -13,7 +13,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -122,6 +121,41 @@ public class SerialService extends Service implements SerialListener {
 //        }
 //    };
 
+    /**
+     * Creates an intent with the input string and passes it to Terminal Fragment, which then prints it
+     *
+     */
+    void print_to_terminal(String input) {
+        Intent intent = new Intent(TerminalFragment.GENERAL_PURPOSE_PRINT);
+        intent.putExtra(TerminalFragment.GENERAL_PURPOSE_STRING, input);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    void send_heading_intent() {
+        Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATE);
+        intent.putExtra(TerminalFragment.RECEIVE_ROTATION_STATE, rotationState.toString());
+        intent.putExtra(TerminalFragment.RECEIVE_ANGLE, pot_angle);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    static SerialService.RotationState lastRotationState = null;
+    /**
+     * Checks if the state of the rotate state machine has changed since last time, and if it has,
+     * prints the state and decision variables for debugging.
+     *
+     */
+    void rotateRunnable_statePrint(SerialService.RotationState newRotationState) {
+        if (lastRotationState == null || lastRotationState != newRotationState) {
+            String headingInfo = "currentHeading: "+ pot_angle
+                    + "\nmin: "+headingMin+"\nmax: "+headingMax
+                    + "\nminAsMax: "+treatHeadingMinAsMax
+                    + "\nstate: "+rotationState ;
+
+            print_to_terminal(headingInfo);
+        }
+        lastRotationState = newRotationState;
+    }
+
     // The packaged code sample that moves the motor and checks if it is time to turn around
     private final Runnable rotateRunnable = new Runnable() {
 
@@ -154,95 +188,53 @@ public class SerialService extends Service implements SerialListener {
                     //previous code to swivel the motor indefinitely
 //                    double currentHeading = SensorHelper.getHeading(); //+180;
                     double currentHeading = pot_angle;
-                    if (treatHeadingMinAsMax) { //valid range goes through 0, such as 270->30
-                        //where --- is out of bounds, ==== is in bounds,
-                        //and >-> or <-< marks the current heading and direction
-                        // looks like: 0<====|-------|=====>360
-                        switch (rotationState) { //switch on what state we used to make the previous rotation
-                            case IN_BOUNDS_CW: //0<=== >-> ==|-----|====>360
-                                // turn around once we pass the min
-                                if (OutsideBounds(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
-                                }
-                                break;
-                            case IN_BOUNDS_CCW: // 0<====|----|==== <-< ===>360
-                                // turn back around once we pass the max
-                                if (OutsideBounds(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CW: // 0<===|--- >-> |====>360
-                                // set to back in bounds after passing the max
-                                //   and continue CW
-                                if (InsideUpperBound(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CW;
-                                } else if (InsideLowerBound(currentHeading)) {     // if for some reason it gets off,
-                                    rotationState = RotationState.IN_BOUNDS_CCW;   // make sure it knows it's inside bounds
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CCW: // 0<===| <-< ---|====>360
-                                // set back in bounds after passing the min
-                                if (InsideLowerBound(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CCW;
-                                } else if (InsideUpperBound(currentHeading)) {     // if for some reason it gets off,
-                                    rotationState = RotationState.IN_BOUNDS_CW;    //make sure it knows it's inside bounds
-                                }
-                                break;
-                        }
-                    } else { //valid range goes around 0, such as 90->120
+
+                    //valid range goes around 0, such as 90->120
                         //where ---- is out of bounds and ==== is in bounds,
                         //and <-< or >-> marks the current heading and direction
                         // 0<----|========|----->360
-                        switch (rotationState) {
-                            case IN_BOUNDS_CW: // 0<--|====== >-> ====|-->360
-                                // turn around once we pass the max
-                                if (OutsideUpperBound(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
-                                } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                            case IN_BOUNDS_CCW: // 0<--|== <-< ======|-->360
-                                // turn around once we pass the min
-                                if(OutsideLowerBound(currentHeading)) {
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
-                                } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CW: // 0<-- >-> |========|-->360
-                                // set to back in bounds after passing the min
-                                //   and continue CW
-                                if(InsideBounds(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CW;
-                                } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                            case RETURNING_TO_BOUNDS_CCW: // 0<--|======| <-< -->360
-                                // set back to in bounds after passing the max
-                                //   and continue CCW
-                                if(InsideBounds(currentHeading)) {
-                                    rotationState = RotationState.IN_BOUNDS_CCW;
-                                } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
-                                    rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
-                                }
-                                break;
-                        }
+                    switch (rotationState) {
+                        case IN_BOUNDS_CW: // 0<--|====== >-> ====|-->360
+                            // turn around once we pass the max
+                            if (OutsideUpperBound(currentHeading)) {
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;
+                            } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                        case IN_BOUNDS_CCW: // 0<--|== <-< ======|-->360
+                            // turn around once we pass the min
+                            if(OutsideLowerBound(currentHeading)) {
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
+                            } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                        case RETURNING_TO_BOUNDS_CW: // 0<-- >-> |========|-->360
+                            // set to back in bounds after passing the min
+                            //   and continue CW
+                            if(InsideBounds(currentHeading)) {
+                                rotationState = RotationState.IN_BOUNDS_CW;
+                            } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
+                        case RETURNING_TO_BOUNDS_CCW: // 0<--|======| <-< -->360
+                            // set back to in bounds after passing the max
+                            //   and continue CCW
+                            if(InsideBounds(currentHeading)) {
+                                rotationState = RotationState.IN_BOUNDS_CCW;
+                            } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
+                                rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
+                            }
+                            break;
                     }
-
-                    String headingInfo = "currentHeading: "+currentHeading
-                                + "\nmin: "+headingMin+"\nmax: "+headingMax
-                                + "\nminAsMax: "+treatHeadingMinAsMax
-                                + "\nstate: "+rotationState ;
-                    Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATS);
-                    intent.putExtra(TerminalFragment.RECEIVE_HEADING_EXTRA, headingInfo);
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-
 
                     FirebaseService.Companion.getServiceInstance().appendHeading(
                             currentHeading, headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
                 }
+
+                rotateRunnable_statePrint(rotationState);
 
                 //As long as we are to continue moving, schedule this method to be run again
                 if (isMotorRunning) {
@@ -593,6 +585,9 @@ public class SerialService extends Service implements SerialListener {
                 //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
                 //with the offset depending on how we want to deal with wrapping around 0
                 pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+
+                //send the angle and rotation state to terminal fragment to be displayed onscreen
+                send_heading_intent();
 
                 //** CLOCKWISE = higher voltage, counterclockwise = lower voltage
 

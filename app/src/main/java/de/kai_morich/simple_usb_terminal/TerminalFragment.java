@@ -19,7 +19,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.SystemClock;
 import android.text.InputType;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -103,6 +102,14 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private SerialService service;
 
     private TextView receiveText;
+
+    private TextView angleDisplayText;
+
+    private TextView rotationStateDisplayText;
+
+    private TextView rotationMinDisplay;
+
+    private TextView rotationMaxDisplay;
     private RangeSlider headingSlider;
     private BlePacket pendingPacket;
 
@@ -132,19 +139,34 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         instance = this;
     }
 
-    public static final String RECEIVE_HEADING_STATS = "TerminalFragment.RECEIVE_HEADING_STATE";
-    public static final String RECEIVE_HEADING_EXTRA = "TerminalFragment.HEADING_EXTRA";
+    public static final String RECEIVE_HEADING_STATE = "TerminalFragment.RECEIVE_HEADING_STATE";
+    public static final String RECEIVE_ROTATION_STATE = "TerminalFragment.RECEIVE_ROTATION_STATE";
+
+    public static final String RECEIVE_ANGLE = "TerminalFragment.RECEIVE_ANGLE";
+    public static final String GENERAL_PURPOSE_PRINT = "TerminalFragment.GENERAL_PURPOSE_PRINT";
+
+    public static final String GENERAL_PURPOSE_STRING = "TerminalFragment.GENERAL_PURPOSE_STRING";
+
     private LocalBroadcastManager bManager;
 
-    private BroadcastReceiver headingReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver terminalReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(RECEIVE_HEADING_STATS)){
-                String s = intent.getExtras().getString(RECEIVE_HEADING_EXTRA);
-                System.out.println("heading received: "+s);
-                if(receiveText != null){
-                    receiveText.append(s+"\n");
-                }
+            String s = null;
+            if (intent.getAction().equals(RECEIVE_HEADING_STATE)){
+                String state = intent.getStringExtra(RECEIVE_ROTATION_STATE);
+                double angle = intent.getFloatExtra(RECEIVE_ANGLE, 0); //todo: why does 0.0 not work here?
+                String formattedAngle = "Angle: " + String.format("%-7.1f", angle);
+                angleDisplayText.setText(formattedAngle);
+                rotationStateDisplayText.setText(state);
+                System.out.println("heading received: "+ angle);
+            } else if (intent.getAction().equals(GENERAL_PURPOSE_PRINT)) {
+                s = intent.getExtras().getString(GENERAL_PURPOSE_STRING);
+                System.out.println(s);
+            }
+
+            if(receiveText != null && s != null){
+                receiveText.append(s+"\n");
             }
         }
     };
@@ -167,8 +189,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         bManager = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
         IntentFilter filter = new IntentFilter();
-        filter.addAction(RECEIVE_HEADING_STATS);
-        bManager.registerReceiver(headingReceiver, filter);
+        filter.addAction(RECEIVE_HEADING_STATE);
+        filter.addAction(GENERAL_PURPOSE_PRINT);
+        bManager.registerReceiver(terminalReceiver, filter);
     }
 
     /**
@@ -179,7 +202,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         if (connected != Connected.False)
             disconnect();
         getActivity().stopService(new Intent(getActivity(), SerialService.class));
-        bManager.unregisterReceiver(headingReceiver);
+        bManager.unregisterReceiver(terminalReceiver);
         super.onDestroy();
     }
 
@@ -274,6 +297,21 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         View setupBtn = view.findViewById(R.id.setup_btn);
         setupBtn.setOnClickListener(this::onSetupClicked);
 
+        //setup angle display view
+        angleDisplayText = view.findViewById(R.id.DisplayAngle);
+        angleDisplayText.setText("Rotator Angle:");
+
+        //setup rotation state display view
+        rotationStateDisplayText = view.findViewById(R.id.RotationStateDisplay);
+        rotationStateDisplayText.setText("rotation State: ");
+
+        rotationMinDisplay = view.findViewById(R.id.RotationStateMin);
+        rotationMinDisplay.setText("Min: " + 20.0f);
+
+        rotationMaxDisplay = view.findViewById(R.id.RotationStateMax);
+        rotationMaxDisplay.setText("Max: " + 270.0f);
+
+
         View stopUploadBtn = view.findViewById(R.id.stop_upload_btn);
         stopUploadBtn.setOnClickListener(btn -> {
             Toast.makeText(getContext(), "click!", Toast.LENGTH_SHORT).show();
@@ -293,9 +331,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         headingSlider = view.findViewById(R.id.slider);
         //load the min/max from local storage
-        sharedPref = getContext().getSharedPreferences(PREFERENCE_FILE, Context.MODE_PRIVATE);
-        float headingMin = sharedPref.getFloat("heading_min", /*default*/20.0f);
-        float headingMax = sharedPref.getFloat("heading_max", /*default*/270.0f);
+//        sharedPref = getContext().getSharedPreferences(PREFERENCE_FILE, Context.MODE_PRIVATE);
+//        float headingMin = sharedPref.getFloat("heading_min", /*default*/20.0f);
+//        float headingMax = sharedPref.getFloat("heading_max", /*default*/270.0f);
+        //load the min/max from the slider at start
+        float headingMin = 20.0f;
+        float headingMax = 270.0f;
         Log.d("TerminalFragment", "Loaded min/max: "+headingMin+", "+headingMax);
         headingSlider.setValues(Arrays.asList(headingMin, headingMax));
         headingSlider.addOnChangeListener((rangeSlider, value, fromUser) -> {
@@ -306,6 +347,10 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 headingRangeIntent.setAction(SerialService.KEY_HEADING_RANGE_ACTION);
                 // turns out List.ToArray() can only return Object[], so use a custom method for float[]
                 float[] arr = listToArray(rangeSlider.getValues());
+
+                rotationMinDisplay.setText("Min: " + String.format("%.0f", arr[0]));
+                rotationMaxDisplay.setText("Max: " + String.format("%.0f", arr[1]));
+
                 headingRangeIntent.putExtra(SerialService.KEY_HEADING_RANGE_STATE, arr);
                 SerialService.getInstance().sendBroadcast(headingRangeIntent);
             }
@@ -572,21 +617,21 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
             pendingPacket = BlePacket.parsePacket(data);
         } else if (BGapi.isAngleResponse(data)) {
-            byte[] lastTwoBytes = new byte[2];
-//             Extract the last 2 bytes
-            System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
-
-//             Extract the most significant 12 bits into an integer
-            int pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
-
-//             multiply by 1/2^12 (adc resolution)
-             float pot_voltage = (float) (pot_bits * 0.002);
-
-//            converts voltage to angle based on calibrated min and max values
-//            before min and max values have been run into and measured, uses pre-measured values
-            float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
-
-            receiveText.append("Angle: " + pot_angle + '\t' +"voltage: " + pot_voltage + "\t" + "Hex: " + pot_bits + '\n');
+//            byte[] lastTwoBytes = new byte[2];
+////             Extract the last 2 bytes
+//            System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
+//
+////             Extract the most significant 12 bits into an integer
+//            int pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+//
+////             multiply by 1/2^12 (adc resolution)
+//             float pot_voltage = (float) (pot_bits * 0.002);
+//
+////            converts voltage to angle based on calibrated min and max values
+////            before min and max values have been run into and measured, uses pre-measured values
+//            float pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+//
+//            receiveText.append("Angle: " + pot_angle + '\t' +"voltage: " + pot_voltage + "\t" + "Hex: " + pot_bits + '\n');
 //            receiveText.append("Got angle measurement\n");
         } else if(BGapi.isTemperatureResponse(data)){
             int temperature = data[data.length-2];
