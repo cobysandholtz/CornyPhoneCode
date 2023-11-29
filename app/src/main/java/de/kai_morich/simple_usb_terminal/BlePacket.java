@@ -77,6 +77,10 @@ public class BlePacket {
 //        periodic interval - 00
 //        00 E5
 
+            //251 total bytes in data sent by NCP over serial
+            //22 bytes of NCP header
+            //36 bytes of GATT header
+            //192 bytes of recorded capacitance data
 
 
         if (bytes.length < 31)

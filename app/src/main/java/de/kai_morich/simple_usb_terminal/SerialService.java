@@ -23,6 +23,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
 
 /**
@@ -140,6 +141,16 @@ public class SerialService extends Service implements SerialListener {
         intent.putExtra(TerminalFragment.RECEIVE_ROTATION_STATE, rotationState.toString());
         intent.putExtra(TerminalFragment.RECEIVE_ANGLE, pot_angle);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    /**Used to set lastCommand so that the tracker doesn't automatically stop commands sent via UI
+     *
+     * @param str the command that TerminalFragment is about to send to the gecko
+     */
+    void setLastCommand(String str) {
+        if (str.equals(BGapi.ROTATE_CCW) || str.equals(BGapi.ROTATE_CW) || str.equals(BGapi.ROTATE_STOP)) {
+            lastCommand = str;
+        }
     }
 
     static SerialService.RotationState lastRotationState = null;
@@ -408,7 +419,7 @@ public class SerialService extends Service implements SerialListener {
      * <p>
      * This method is expected to be used by UI elements i.e. TerminalFragment
      */
-    public void attach(SerialListener listener) {
+    public void attach(SerialListener listener) throws IOException {
         //Not entirely sure why this is necessary
         if (Looper.getMainLooper().getThread() != Thread.currentThread())
             throw new IllegalArgumentException("not in main thread");
@@ -553,7 +564,7 @@ public class SerialService extends Service implements SerialListener {
         }
     }
 
-    public void onSerialRead(byte[] data) {
+    public void onSerialRead(byte[] data) throws IOException {
         if (connected) {
             //TODO find a more organized way to do this parsing
 
@@ -620,17 +631,17 @@ public class SerialService extends Service implements SerialListener {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } else if("message_rotate_ccw_rsp".equals(BGapi.getResponseName(data))) {
-              if (lastCommand != BGapi.ROTATE_CCW) {
+            } else if(BGapi.ROTATE_CCW.equals(BGapi.getResponseName(data)) || BGapi.ROTATE_CW.equals(BGapi.getResponseName(data)) || BGapi.ROTATE_STOP.equals(BGapi.getResponseName(data)) ) {
+              if (!Objects.equals(lastCommand, BGapi.getResponseName(data))) {
                   if (lastEventTime < 0) {
                       lastEventTime = System.currentTimeMillis();
-                      System.out.print("ERROR: unexpected Rotate CCW rsp received for the first time\n");
+                      System.out.print("ERROR: unexpected " + BGapi.getResponseName(data) +  " rsp received for the first time\n");
                   } else {
                       long timeElapsed = System.currentTimeMillis() - lastEventTime;
                       lastEventTime = System.currentTimeMillis();
-                      System.out.print("ERROR: unexpected Rotate CCW rsp received after " + timeElapsed/1000 + " seconds\n");
+                      System.out.print("ERROR: unexpected " + BGapi.getResponseName(data) +  " received after " + timeElapsed/1000 + " seconds\n");
                   }
-
+                  write(TextUtil.fromHexString(lastCommand));
               }
             }
             else if (!BGapi.isKnownResponse(data)) {
@@ -659,7 +670,11 @@ public class SerialService extends Service implements SerialListener {
                 if (uiFacingListener != null) {
                     mainLooper.post(() -> {
                         if (uiFacingListener != null) {
-                            uiFacingListener.onSerialRead(data);
+                            try {
+                                uiFacingListener.onSerialRead(data);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
                         } else {
                             queue1.add(new QueueItem(QueueType.Read, data, null));
                         }

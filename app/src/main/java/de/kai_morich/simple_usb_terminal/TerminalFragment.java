@@ -52,6 +52,7 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -212,8 +213,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public void onStart() {
         super.onStart();
-        if (service != null)
-            service.attach(this);
+        if (service != null) {
+            try {
+                service.attach(this);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         else
             getActivity().startService(new Intent(getActivity(), SerialService.class)); // prevents service destroy on unbind from recreated activity caused by orientation change
     }
@@ -275,7 +281,11 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public void onServiceConnected(ComponentName name, IBinder binder) {
         service = ((SerialService.SerialBinder) binder).getService();
-        service.attach(this);
+        try {
+            service.attach(this);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         if (initialStart && isResumed()) {
             initialStart = false;
             getActivity().runOnUiThread(this::connect);
@@ -355,6 +365,16 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 SerialService.getInstance().sendBroadcast(headingRangeIntent);
             }
         });
+
+        //broadcast the start values
+        Intent headingRangeIntent = new Intent(getContext(), SerialService.ActionListener.class);
+        headingRangeIntent.setAction(SerialService.KEY_HEADING_RANGE_ACTION);
+
+        float[] arr = {headingMin, headingMax};
+
+        headingRangeIntent.putExtra(SerialService.KEY_HEADING_RANGE_STATE, arr);
+        SerialService.getInstance().sendBroadcast(headingRangeIntent);
+
 
         SwitchCompat toggleHeadingBtn = view.findViewById(R.id.heading_range_toggle);
         toggleHeadingBtn.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -579,6 +599,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             SpannableStringBuilder spn = new SpannableStringBuilder(msg + '\n');
             spn.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorSendText)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             receiveText.append(spn);
+            service.setLastCommand(str);
             service.write(data);
         } catch (SerialTimeoutException e) {
             status("write timeout: " + e.getMessage());

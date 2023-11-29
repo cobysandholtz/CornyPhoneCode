@@ -92,8 +92,13 @@ public class SerialSocket implements SerialInputOutputManager.Listener {
 
     @Override
     public void onNewData(byte[] data) {
-        if (listener != null)
-            listener.onSerialRead(data);
+        if (listener != null) {
+            try {
+                listener.onSerialRead(data);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override

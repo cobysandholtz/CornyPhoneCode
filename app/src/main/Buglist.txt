@@ -5,3 +5,7 @@
 -Some slight kinks in the rotation state machine to be ironed out
 -Recovery from disconnect errors needs to be implemented as a safeguard
 -All errors and exceptions should get written to a file so that we can debug things after a long period of time (just pipe logcat out?)
+    -Exception handling in general should be better; currently there is no recovery from any kind of runtime exception
+
+-Some packets stored in the logs are much longer than they should be; they have the full correct packet and then up to several hundred bytes of additional bad data. We should stop adding more to parse after 251 bytes.
+-Include logging magnetometer data as well as the potentiometer data to firebase
