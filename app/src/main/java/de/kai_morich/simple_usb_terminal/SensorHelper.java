@@ -27,7 +27,13 @@ import androidx.annotation.RequiresApi;
  * */
 public class SensorHelper extends Service implements SensorEventListener {
 
-    float[] accelerometerReading = new float[3], magnetometerReading = new float[3];
+    float[] accelerometerReading = new float[3];
+
+    public float[] getMagnetometerReadingThreeDim() {
+        return magnetometerReading;
+    }
+
+    float[] magnetometerReading = new float[3];
     //float[] potentiometerReading = new float[3];
     private static double heading = 0.0;
 
@@ -68,14 +74,16 @@ public class SensorHelper extends Service implements SensorEventListener {
      * Returns the most recent measurement of the axis perpendicular to the surface of the earth
      * (I think)
      * */
-    public static double getHeading() {
+    public static double getMagnetometerReadingSingleDim() {
         return heading;
     }
+
 
     /**
      * Inherited from SensorEventListener.
      * Called by the system when there is new info from either of the sensors we
      * subscribed to (accelerometer, magnetometer). Does the math and saves the new heading
+     * todo: is the math correct?
      * */
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -90,7 +98,7 @@ public class SensorHelper extends Service implements SensorEventListener {
         float[] rotationMatrix = new float[9];
         SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
         float[] orientation = SensorManager.getOrientation(rotationMatrix, new float[3]);
-        //heading = (Math.toDegrees(orientation[0]));
+        heading = (Math.toDegrees(orientation[0]));
     }
 
     /**

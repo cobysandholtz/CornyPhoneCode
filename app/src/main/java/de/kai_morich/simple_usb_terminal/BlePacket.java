@@ -9,7 +9,6 @@ import androidx.annotation.RequiresApi;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -38,7 +37,7 @@ public class BlePacket {
     @SuppressLint("NewApi")
     private BlePacket(String addr, byte rssi, byte channel, byte packet_type, byte[] data) {
         time = LocalDateTime.now();
-        heading = SensorHelper.getHeading();
+        heading = SensorHelper.getMagnetometerReadingSingleDim();
 
         Location location = LocationBroadcastReceiver.Companion.getCurrentLocation();
         if (location != null) {

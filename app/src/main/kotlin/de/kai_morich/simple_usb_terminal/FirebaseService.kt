@@ -266,7 +266,7 @@ class FirebaseService : Service() {
         }
     }
 
-    fun appendHeading(
+    fun appendHeading( //todo: add separate fields for magnetometer heading and potentiometer heading
         heading: Double,
         headingMin: Double,
         headingMax: Double,

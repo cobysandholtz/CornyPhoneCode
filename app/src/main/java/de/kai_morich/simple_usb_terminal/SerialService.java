@@ -84,8 +84,8 @@ public class SerialService extends Service implements SerialListener {
     private boolean connected;
 
     // rotation variables
-    private long motorRotateTime = 500; /*.5 s*/
-    private long motorSleepTime = 5000; /*5 s*/
+    private final long motorRotateTime = 500; /*.5 s*/
+    private final long motorSleepTime = 5000; /*5 s*/
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
     private static double headingMin = 0.0;
     private static double headingMax = 360.0;
@@ -180,7 +180,7 @@ public class SerialService extends Service implements SerialListener {
             try {
                 if (connected) {
 
-                    double oldHeading = SensorHelper.getHeading();
+                    double oldHeading = SensorHelper.getMagnetometerReadingSingleDim();
                     String rotateCommand = BGapi.ROTATE_STOP;
                     if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
                         rotateCommand = BGapi.ROTATE_CW;
