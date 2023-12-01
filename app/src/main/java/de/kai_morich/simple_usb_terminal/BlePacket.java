@@ -23,7 +23,8 @@ public class BlePacket {
     private LocalDateTime time;
     private double latt;
     private double longg;
-    private double heading;
+    private double magHeading;
+    private double potHeading;
     private String addr;
     private byte rssi;
     private byte channel;
@@ -37,7 +38,8 @@ public class BlePacket {
     @SuppressLint("NewApi")
     private BlePacket(String addr, byte rssi, byte channel, byte packet_type, byte[] data) {
         time = LocalDateTime.now();
-        heading = SensorHelper.getMagnetometerReadingSingleDim();
+        magHeading = SensorHelper.getMagnetometerReadingSingleDim();
+        potHeading = SerialService.getPotAngle();
 
         Location location = LocationBroadcastReceiver.Companion.getCurrentLocation();
         if (location != null) {
@@ -122,7 +124,7 @@ public class BlePacket {
         return time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"))
                 + "\nLat: " + latt
                 + "\nLong: " + longg
-                + "\nHead: " + heading
+                + "\nHead: " + magHeading
                 + "\nAddr: " + addr
                 + "\nRSSI: " + rssi
                 + "\nChannel: " + (channel & 0xFF /*'cast' to unsigned*/)
@@ -146,12 +148,14 @@ public class BlePacket {
         return time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"))
                 + "," + latt
                 + "," + longg
-                + "," + heading
+                + "," + potHeading
+                + "," + magHeading
                 + "," + addr
                 + "," + rssi
                 + "," + (channel & 0xFF)
                 + "," + TextUtil.toHexString(data) + "\n";
     }
+
 
 
 

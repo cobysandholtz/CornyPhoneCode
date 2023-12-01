@@ -101,7 +101,12 @@ public class SerialService extends Service implements SerialListener {
     private BlePacket pendingPacket;
     private byte[] pendingBytes = null;
     private static SerialService instance;
-    public static float pot_angle;
+
+    public static float getPotAngle() {
+        return potAngle;
+    }
+
+    public static float potAngle;
 
     public static String lastCommand;
 
@@ -119,14 +124,6 @@ public class SerialService extends Service implements SerialListener {
     }
 
 
-    private Handler motorStopHandler = new Handler(); //todo: needs to be declared with looper like the others?
-//    private final Runnable motorStopRunnable = new Runnable() {
-//        @Override
-//        public void run() {
-
-//        }
-//    };
-
     /**
      * Creates an intent with the input string and passes it to Terminal Fragment, which then prints it
      *
@@ -140,7 +137,7 @@ public class SerialService extends Service implements SerialListener {
     void send_heading_intent() {
         Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATE);
         intent.putExtra(TerminalFragment.RECEIVE_ROTATION_STATE, rotationState.toString());
-        intent.putExtra(TerminalFragment.RECEIVE_ANGLE, pot_angle);
+        intent.putExtra(TerminalFragment.RECEIVE_ANGLE, potAngle);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
@@ -162,7 +159,7 @@ public class SerialService extends Service implements SerialListener {
      */
     void rotateRunnable_statePrint(SerialService.RotationState newRotationState) {
         if (lastRotationState == null || lastRotationState != newRotationState) {
-            String headingInfo = "currentHeading: "+ pot_angle
+            String headingInfo = "currentHeading: "+ potAngle
                     + "\nmin: "+headingMin+"\nmax: "+headingMax
                     + "\nminAsMax: "+treatHeadingMinAsMax
                     + "\nstate: "+rotationState ;
@@ -206,7 +203,7 @@ public class SerialService extends Service implements SerialListener {
 
                     //previous code to swivel the motor indefinitely
 //                    double currentHeading = SensorHelper.getHeading(); //+180;
-                    double currentHeading = pot_angle;
+                    double currentHeading = potAngle;
 
                     //valid range goes around 0, such as 90->120
                     //where ---- is out of bounds and ==== is in bounds,
@@ -255,6 +252,7 @@ public class SerialService extends Service implements SerialListener {
                     System.out.println("Wrote headings to firebase service companion");
                     System.out.println("Magnetometer heading was: " + Arrays.toString(SensorHelper.getMagnetometerReadingThreeDim()) + "\n");
                     System.out.println("Potentiometer heading was: " + currentHeading + "\n");
+                    System.out.println("single Dim Magnetometer Heading was: " + SensorHelper.getMagnetometerReadingSingleDim());
 
                 }
 
@@ -608,7 +606,7 @@ public class SerialService extends Service implements SerialListener {
                 //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
                 //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
                 //with the offset depending on how we want to deal with wrapping around 0
-                pot_angle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+                potAngle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
 
                 //send the angle and rotation state to terminal fragment to be displayed onscreen
                 send_heading_intent();
