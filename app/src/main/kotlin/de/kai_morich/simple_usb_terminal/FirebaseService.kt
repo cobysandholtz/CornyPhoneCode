@@ -123,6 +123,7 @@ class FirebaseService : Service() {
             handler = Handler(looper!!)
 
             timeoutRunnable = Runnable {
+                System.out.println("About to upload log")
                 uploadLog()
 //                Toast.makeText(applicationContext, "Handler fired", Toast.LENGTH_SHORT).show();
                 //after uploadDelay milliseconds, run the code inside timeoutRunnable again
@@ -182,9 +183,11 @@ class FirebaseService : Service() {
         fileRef.putFile(uri)
             .addOnSuccessListener {
                 Toast.makeText(applicationContext, "Upload Success $dir", Toast.LENGTH_SHORT).show()
+                Log.i(TAG,"Upload success for $fileRef")
             }
             .addOnFailureListener {
 //                Toast.makeText(applicationContext, it.message, Toast.LENGTH_SHORT).show()
+                Log.i(TAG,"Upload failure for $fileRef")
             }
     }
 
@@ -236,6 +239,7 @@ class FirebaseService : Service() {
      * Note that files use the timestamp of when they were created, not when they were uploaded
      * */
     fun uploadLog() {
+        Log.i(TAG, "upload log called")
         synchronized(this) {
             //close the FileWriter
             logFw?.close()
@@ -266,17 +270,23 @@ class FirebaseService : Service() {
         }
     }
 
-    fun appendHeading( //todo: add separate fields for magnetometer heading and potentiometer heading
-            potHeading: Double,
-            magHeading: FloatArray,
-            headingMin: Double,
-            headingMax: Double,
-            treatHeadingMinAsMax: Boolean,
-            oldHeading: Double,
-            state: String
-    ) {
+//    fun appendHeading(
+//            potHeading: Double,
+//            magHeading: FloatArray,
+//            headingMin: Double,
+//            headingMax: Double,
+//            treatHeadingMinAsMax: Boolean,
+//            oldHeading: Double,
+//            state: String
+//    ) {
+//        synchronized(this) {
+//            headingFw?.write("${getDateTime()},$potHeading, ${magHeading.joinToString(",")}, $headingMin,$headingMax,$treatHeadingMinAsMax,$oldHeading,$state\n")
+//        }
+//    }
+
+    fun appendHeading(csv: String) {
         synchronized(this) {
-            headingFw?.write("${getDateTime()},$potHeading, ${magHeading.joinToString(",")}, $headingMin,$headingMax,$treatHeadingMinAsMax,$oldHeading,$state\n")
+            headingFw?.write(csv)
         }
     }
 

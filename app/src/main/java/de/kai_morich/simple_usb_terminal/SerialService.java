@@ -246,13 +246,20 @@ public class SerialService extends Service implements SerialListener {
                             break;
                     }
 
-                    System.out.println("About to write headings to firebase service companion");
-                    FirebaseService.Companion.getServiceInstance().appendHeading(
-                            currentHeading, SensorHelper.getMagnetometerReadingThreeDim(), headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
-                    System.out.println("Wrote headings to firebase service companion");
-                    System.out.println("Magnetometer heading was: " + Arrays.toString(SensorHelper.getMagnetometerReadingThreeDim()) + "\n");
-                    System.out.println("Potentiometer heading was: " + currentHeading + "\n");
-                    System.out.println("single Dim Magnetometer Heading was: " + SensorHelper.getMagnetometerReadingSingleDim());
+//                    System.out.println("About to write headings to firebase service companion");
+
+                    String headingStr = String.join(", ",
+                            String.valueOf(currentHeading),
+                            Arrays.toString(SensorHelper.getMagnetometerReadingThreeDim()),
+                            String.valueOf(headingMin),
+                            String.valueOf(headingMax),
+                            String.valueOf(treatHeadingMinAsMax),
+                            String.valueOf(oldHeading),
+                            rotationState.toString()
+                    );
+
+                    FirebaseService.Companion.getServiceInstance().appendHeading(headingStr);
+//                    System.out.println("Wrote headings to firebase service companion: " + headingStr);
 
                 }
 
@@ -635,8 +642,8 @@ public class SerialService extends Service implements SerialListener {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } else if(BGapi.ROTATE_CCW.equals(BGapi.getResponseName(data)) || BGapi.ROTATE_CW.equals(BGapi.getResponseName(data)) || BGapi.ROTATE_STOP.equals(BGapi.getResponseName(data)) ) {
-              if (!Objects.equals(lastCommand, BGapi.getResponseName(data))) {
+            } else if(BGapi.ROTATE_CCW.equals(BGapi.getResponseName(data)) ) {
+              if (!lastCommand.equals(BGapi.getResponseName(data))) {
                   if (lastEventTime < 0) {
                       lastEventTime = System.currentTimeMillis();
                       System.out.print("ERROR: unexpected " + BGapi.getResponseName(data) +  " rsp received for the first time\n");
