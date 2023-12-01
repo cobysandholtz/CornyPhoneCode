@@ -22,6 +22,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
@@ -182,7 +183,7 @@ public class SerialService extends Service implements SerialListener {
 
                     double oldHeading = SensorHelper.getMagnetometerReadingSingleDim();
                     String rotateCommand = BGapi.ROTATE_STOP;
-                    if(rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
+                    if (rotationState == RotationState.IN_BOUNDS_CW || rotationState == RotationState.RETURNING_TO_BOUNDS_CW)
                         rotateCommand = BGapi.ROTATE_CW;
                     else
                         rotateCommand = BGapi.ROTATE_CCW;
@@ -208,9 +209,9 @@ public class SerialService extends Service implements SerialListener {
                     double currentHeading = pot_angle;
 
                     //valid range goes around 0, such as 90->120
-                        //where ---- is out of bounds and ==== is in bounds,
-                        //and <-< or >-> marks the current heading and direction
-                        // 0<----|========|----->360
+                    //where ---- is out of bounds and ==== is in bounds,
+                    //and <-< or >-> marks the current heading and direction
+                    // 0<----|========|----->360
                     switch (rotationState) {
                         case IN_BOUNDS_CW: // 0<--|====== >-> ====|-->360
                             // turn around once we pass the max
@@ -222,7 +223,7 @@ public class SerialService extends Service implements SerialListener {
                             break;
                         case IN_BOUNDS_CCW: // 0<--|== <-< ======|-->360
                             // turn around once we pass the min
-                            if(OutsideLowerBound(currentHeading)) {
+                            if (OutsideLowerBound(currentHeading)) {
                                 rotationState = RotationState.RETURNING_TO_BOUNDS_CW;
                             } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside bounds
                                 rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
@@ -231,7 +232,7 @@ public class SerialService extends Service implements SerialListener {
                         case RETURNING_TO_BOUNDS_CW: // 0<-- >-> |========|-->360
                             // set to back in bounds after passing the min
                             //   and continue CW
-                            if(InsideBounds(currentHeading)) {
+                            if (InsideBounds(currentHeading)) {
                                 rotationState = RotationState.IN_BOUNDS_CW;
                             } else if (OutsideUpperBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
                                 rotationState = RotationState.RETURNING_TO_BOUNDS_CCW;  // and set it on a course towards what is most likely the nearest bound
@@ -240,7 +241,7 @@ public class SerialService extends Service implements SerialListener {
                         case RETURNING_TO_BOUNDS_CCW: // 0<--|======| <-< -->360
                             // set back to in bounds after passing the max
                             //   and continue CCW
-                            if(InsideBounds(currentHeading)) {
+                            if (InsideBounds(currentHeading)) {
                                 rotationState = RotationState.IN_BOUNDS_CCW;
                             } else if (OutsideLowerBound(currentHeading)) {             // if it gets off, make sure it knows it's outside the other bound
                                 rotationState = RotationState.RETURNING_TO_BOUNDS_CW;   // and set it on a course towards what is most likely the nearest bound
@@ -248,8 +249,13 @@ public class SerialService extends Service implements SerialListener {
                             break;
                     }
 
+                    System.out.println("About to write headings to firebase service companion");
                     FirebaseService.Companion.getServiceInstance().appendHeading(
-                            currentHeading, headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
+                            currentHeading, SensorHelper.getMagnetometerReadingThreeDim(), headingMin, headingMax, treatHeadingMinAsMax, oldHeading, rotationState.toString());
+                    System.out.println("Wrote headings to firebase service companion");
+                    System.out.println("Magnetometer heading was: " + Arrays.toString(SensorHelper.getMagnetometerReadingThreeDim()) + "\n");
+                    System.out.println("Potentiometer heading was: " + currentHeading + "\n");
+
                 }
 
                 rotateRunnable_statePrint(rotationState);
@@ -289,7 +295,7 @@ public class SerialService extends Service implements SerialListener {
         }
 
         private boolean OutsideBounds(double heading) {
-            return(heading > headingMin && heading < headingMax);
+            return (heading > headingMin && heading < headingMax);
         }
 
     };

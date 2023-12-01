@@ -29,11 +29,9 @@ public class SensorHelper extends Service implements SensorEventListener {
 
     float[] accelerometerReading = new float[3];
 
-    public float[] getMagnetometerReadingThreeDim() {
-        return magnetometerReading;
-    }
 
-    float[] magnetometerReading = new float[3];
+
+    static float[] magnetometerReading = new float[3];
     //float[] potentiometerReading = new float[3];
     private static double heading = 0.0;
 
@@ -78,6 +76,9 @@ public class SensorHelper extends Service implements SensorEventListener {
         return heading;
     }
 
+    public static float[] getMagnetometerReadingThreeDim() {
+        return magnetometerReading;
+    }
 
     /**
      * Inherited from SensorEventListener.

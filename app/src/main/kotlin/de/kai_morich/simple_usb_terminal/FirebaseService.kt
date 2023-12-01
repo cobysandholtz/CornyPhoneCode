@@ -267,15 +267,16 @@ class FirebaseService : Service() {
     }
 
     fun appendHeading( //todo: add separate fields for magnetometer heading and potentiometer heading
-        heading: Double,
-        headingMin: Double,
-        headingMax: Double,
-        treatHeadingMinAsMax: Boolean,
-        oldHeading: Double,
-        state: String
+            potHeading: Double,
+            magHeading: FloatArray,
+            headingMin: Double,
+            headingMax: Double,
+            treatHeadingMinAsMax: Boolean,
+            oldHeading: Double,
+            state: String
     ) {
         synchronized(this) {
-            headingFw?.write("${getDateTime()},$heading,$headingMin,$headingMax,$treatHeadingMinAsMax,$oldHeading,$state\n")
+            headingFw?.write("${getDateTime()},$potHeading, ${magHeading.joinToString(",")}, $headingMin,$headingMax,$treatHeadingMinAsMax,$oldHeading,$state\n")
         }
     }
 
