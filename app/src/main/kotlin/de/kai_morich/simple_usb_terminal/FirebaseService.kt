@@ -68,7 +68,7 @@ class FirebaseService : Service() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-
+        Log.i(TAG, "Firebase Service onCreate()")
         val path = applicationContext.getExternalFilesDir(null)
         logFile = File(path,getDateTime() + "_log.txt")
         logFw = FileWriter(logFile)

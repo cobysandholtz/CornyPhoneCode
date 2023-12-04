@@ -1,4 +1,13 @@
 
+Some notes on Workers/Services
+    -Workers are great because they guarantee that their tasks will be completed even if the app crashes or even if the phone restarts.
+    -So the obvious use case for workers would be to handle the uploading of received logs, since that can and should be done in the background, and reliability is important
+    -Right now, we're using the FirebaseWorker pretty much only to launch the firebase service, not to actually run any of the firebaseservice functions. So we have all the overhead of a worker, but I don't think we're actually getting any benefit.
+
+
+- There are two firebaseworker creations in workerwrapper; a periodicRequestbuilder, and a oneTimeRequestBuilder. If you only have the second, then firebaseservice just doesn't seem to get launched a lot of the time, but when it does launch it uploads properly. If you only have the first, it launches consistently, but throws a lot of 'no auth token for request' warnings before uploading the logs anyway. Which one do we need and why?
+    -The PeriodicRequest worker does actually launch eventually, but doesn't appear to actually run anything when it does
+- Check for erroneous CCW rotation responses locked in the rotator at the CW extent of its rotation; CCW commands were being sent but not logged somehow, so were repeatedly stopped by the check.
 -Rotator keeps going past upper bound until it gets stuck at 400 degrees (also, doesn't that angle measure imply that we'll be in negative if we rotate past 0?)
 - RSSI and channel from received packets aren't parsed properly (probably fixed)
 -After an unspecified amount of time with autoRotate toggled off, the receiver will spontaneously start rotating counterclockwise and won't stop until you force it to in some way

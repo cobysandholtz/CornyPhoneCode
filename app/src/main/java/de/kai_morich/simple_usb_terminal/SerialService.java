@@ -170,6 +170,7 @@ public class SerialService extends Service implements SerialListener {
     }
 
     // The packaged code sample that moves the motor and checks if it is time to turn around
+
     private final Runnable rotateRunnable = new Runnable() {
 
         @Override
@@ -255,7 +256,8 @@ public class SerialService extends Service implements SerialListener {
                             String.valueOf(headingMax),
                             String.valueOf(treatHeadingMinAsMax),
                             String.valueOf(oldHeading),
-                            rotationState.toString()
+                            rotationState.toString(),
+                            "\n"
                     );
 
                     FirebaseService.Companion.getServiceInstance().appendHeading(headingStr);
@@ -642,8 +644,8 @@ public class SerialService extends Service implements SerialListener {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } else if(BGapi.ROTATE_CCW.equals(BGapi.getResponseName(data)) ) {
-              if (!lastCommand.equals(BGapi.getResponseName(data))) {
+            } else if("message_rotate_ccw_rsp".equals(BGapi.getResponseName(data))) {
+              if (lastCommand == null || !lastCommand.equals(BGapi.ROTATE_CCW)) {
                   if (lastEventTime < 0) {
                       lastEventTime = System.currentTimeMillis();
                       System.out.print("ERROR: unexpected " + BGapi.getResponseName(data) +  " rsp received for the first time\n");
@@ -652,7 +654,7 @@ public class SerialService extends Service implements SerialListener {
                       lastEventTime = System.currentTimeMillis();
                       System.out.print("ERROR: unexpected " + BGapi.getResponseName(data) +  " received after " + timeElapsed/1000 + " seconds\n");
                   }
-                  write(TextUtil.fromHexString(lastCommand));
+                  write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
               }
             }
             else if (!BGapi.isKnownResponse(data)) {

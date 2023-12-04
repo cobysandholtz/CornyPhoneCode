@@ -27,7 +27,10 @@ class FirebaseWorker(private val context: Context, workerParams: WorkerParameter
 
     /**
      * Inherited form CoroutineWorker.
-     * Starts a new instance of FirebaseService if one does not already exist
+     * Starts a new instance of FirebaseService if one does not already
+     *
+     * //todo: instantiating the firebaseService doesn't seem like the actual work that needs to be done in the background, unless there
+     * //is a lot of overhead associated with connecting and authenticating. Shouldn't the uploading itself be done in the background?
      * */
     override suspend fun doWork(): Result {
         //do not launch if the service is already alive
