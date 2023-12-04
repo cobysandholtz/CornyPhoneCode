@@ -46,8 +46,9 @@ class FirebaseWorker(private val context: Context, workerParams: WorkerParameter
                     context.startService(trackerServiceIntent)
                 }
             }
+        } else {
+            FirebaseService.instance?.uploadLog()
         }
-
         return Result.success()
     }
 

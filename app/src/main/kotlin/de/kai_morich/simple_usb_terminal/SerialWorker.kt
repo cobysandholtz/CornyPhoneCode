@@ -44,7 +44,7 @@ class SerialWorker (private val context: Context, workerParams: WorkerParameters
             }
         }
 
-        return ListenableWorker.Result.success()
+        return Result.success()
     }
 
     /**

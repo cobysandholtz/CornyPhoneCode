@@ -18,3 +18,28 @@ Some notes on Workers/Services
 
 -Some packets stored in the logs are much longer than they should be; they have the full correct packet and then up to several hundred bytes of additional bad data. We should stop adding more to parse after 251 bytes.
 -Include logging magnetometer data as well as the potentiometer data to firebase
+
+
+
+
+-tried having FirebaseWorker just run uploadLog() if a FirebaseService already existed, and got this error:
+5428 WM-WorkerWrapper        de.kai_morich.simple_usb_terminal    E  Work [ id=0fa2efb3-6899-4c5b-b2f2-bc9fc4c31c06, tags={ de.kai_morich.simple_usb_terminal.FirebaseWorker } ] failed because it threw an exception/error
+                                                                                                    java.util.concurrent.ExecutionException: java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.Context android.content.Context.getApplicationContext()' on a null object reference
+                                                                                                    	at androidx.work.impl.utils.futures.AbstractFuture.getDoneValue(AbstractFuture.java:516)
+                                                                                                    	at androidx.work.impl.utils.futures.AbstractFuture.get(AbstractFuture.java:475)
+                                                                                                    	at androidx.work.impl.WorkerWrapper$2.run(WorkerWrapper.java:311)
+                                                                                                    	at androidx.work.impl.utils.SerialExecutor$Task.run(SerialExecutor.java:91)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+                                                                                                    	at java.lang.Thread.run(Thread.java:1012)
+                                                                                                    Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.Context android.content.Context.getApplicationContext()' on a null object reference
+                                                                                                    	at android.content.ContextWrapper.getApplicationContext(ContextWrapper.java:125)
+                                                                                                    	at de.kai_morich.simple_usb_terminal.FirebaseService.uploadLog(FirebaseService.kt:250)
+                                                                                                    	at de.kai_morich.simple_usb_terminal.FirebaseWorker.doWork(FirebaseWorker.kt:50)
+                                                                                                    	at androidx.work.CoroutineWorker$startWork$1.invokeSuspend(CoroutineWorker.kt:68)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:106)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:571)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:750)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:678)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:665)
