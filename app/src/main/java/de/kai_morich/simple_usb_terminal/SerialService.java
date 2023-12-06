@@ -22,6 +22,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Objects;
@@ -73,6 +75,7 @@ public class SerialService extends Service implements SerialListener {
         }
     }
 
+    private LocalDateTime lastHeadingTime;
     private final Handler mainLooper;
     private Handler motorHandler;
     private final IBinder binder;
@@ -250,6 +253,7 @@ public class SerialService extends Service implements SerialListener {
 //                    System.out.println("About to write headings to firebase service companion");
 
                     String headingStr = String.join(", ",
+                            lastHeadingTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss")),
                             String.valueOf(currentHeading),
                             Arrays.toString(SensorHelper.getMagnetometerReadingThreeDim()),
                             String.valueOf(headingMin),
@@ -617,6 +621,8 @@ public class SerialService extends Service implements SerialListener {
                 //with the offset depending on how we want to deal with wrapping around 0
                 potAngle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
 
+                lastHeadingTime = LocalDateTime.now();
+
                 //send the angle and rotation state to terminal fragment to be displayed onscreen
                 send_heading_intent();
 
@@ -674,6 +680,8 @@ public class SerialService extends Service implements SerialListener {
                 }
                 //and it not, try to add it to the end of pending packet
                 else if (pendingPacket != null) {
+                    //todo: instead of just appending random data, check what it is (consider max possible length of packet)
+                    //we should never be appending data to an already finsihed packet
                     pendingPacket.appendData(data);
                 }
             }

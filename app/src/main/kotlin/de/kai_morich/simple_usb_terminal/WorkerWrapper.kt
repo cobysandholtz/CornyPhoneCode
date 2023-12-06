@@ -35,7 +35,7 @@ class WorkerWrapper {
         }
 
         @JvmStatic fun stopFireBaseWorker(context: Context) {
-            WorkManager.getInstance(context).cancelAllWorkByTag("FirebaseService")
+            WorkManager.getInstance(context).cancelUniqueWork("FirebaseService")
         }
 
         @JvmStatic fun startSerialWorker(context: Context){
