@@ -252,6 +252,10 @@ public class SerialService extends Service implements SerialListener {
 
 //                    System.out.println("About to write headings to firebase service companion");
 
+                    if (lastHeadingTime == null) {
+                        lastHeadingTime = LocalDateTime.now();
+                    }
+
                     String headingStr = String.join(", ",
                             lastHeadingTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss")),
                             String.valueOf(currentHeading),

@@ -315,12 +315,6 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         rotationStateDisplayText = view.findViewById(R.id.RotationStateDisplay);
         rotationStateDisplayText.setText("rotation State: ");
 
-        rotationMinDisplay = view.findViewById(R.id.RotationStateMin);
-        rotationMinDisplay.setText("Min: " + 20.0f);
-
-        rotationMaxDisplay = view.findViewById(R.id.RotationStateMax);
-        rotationMaxDisplay.setText("Max: " + 270.0f);
-
 
         View stopUploadBtn = view.findViewById(R.id.stop_upload_btn);
         stopUploadBtn.setOnClickListener(btn -> {
@@ -345,8 +339,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 //        float headingMin = sharedPref.getFloat("heading_min", /*default*/20.0f);
 //        float headingMax = sharedPref.getFloat("heading_max", /*default*/270.0f);
         //load the min/max from the slider at start
-        float headingMin = 20.0f;
-        float headingMax = 270.0f;
+//        float headingMin = 20.0f;
+//        float headingMax = 270.0f;
         Log.d("TerminalFragment", "Loaded min/max: "+headingMin+", "+headingMax);
         headingSlider.setValues(Arrays.asList(headingMin, headingMax));
         headingSlider.addOnChangeListener((rangeSlider, value, fromUser) -> {
@@ -358,13 +352,19 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 // turns out List.ToArray() can only return Object[], so use a custom method for float[]
                 float[] arr = listToArray(rangeSlider.getValues());
 
-                rotationMinDisplay.setText("Min: " + String.format("%.0f", arr[0]));
-                rotationMaxDisplay.setText("Max: " + String.format("%.0f", arr[1]));
+                rotationMinDisplay.setText(new StringBuilder().append("Min: ").append(String.format("%.0f", arr[0])).toString());
+                rotationMaxDisplay.setText(new StringBuilder().append("Max: ").append(String.format("%.0f", arr[1])).toString());
 
                 headingRangeIntent.putExtra(SerialService.KEY_HEADING_RANGE_STATE, arr);
                 SerialService.getInstance().sendBroadcast(headingRangeIntent);
             }
         });
+
+        rotationMinDisplay = view.findViewById(R.id.RotationStateMin);
+        rotationMinDisplay.setText(new StringBuilder().append("Min: ").append(headingMin).toString());
+
+        rotationMaxDisplay = view.findViewById(R.id.RotationStateMax);
+        rotationMaxDisplay.setText(new StringBuilder().append("Max: ").append(headingMax).toString());
 
         //broadcast the start values
         Intent headingRangeIntent = new Intent(getContext(), SerialService.ActionListener.class);
