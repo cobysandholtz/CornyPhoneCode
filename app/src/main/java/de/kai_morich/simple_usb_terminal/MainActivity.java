@@ -28,6 +28,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
+import androidx.work.Operation;
 import androidx.work.PeriodicWorkRequest;
 
 import com.google.android.gms.location.CurrentLocationRequest;
@@ -80,8 +81,19 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         getSupportFragmentManager().addOnBackStackChangedListener(this);
 
         startService(new Intent(this, SensorHelper.class));
-        WorkerWrapper.startFirebaseWorker(getApplicationContext());
+
+
+        WorkerWrapper.checkWorkerStatus(getApplicationContext());
+        WorkerWrapper.stopFireBaseWorker(getApplicationContext());
+        WorkerWrapper.checkWorkerStatus(getApplicationContext());
+
+
+//        WorkerWrapper.startFirebaseWorker(getApplicationContext());
         WorkerWrapper.startSerialWorker(getApplicationContext());
+
+        startService(new Intent(this, FirebaseService.class));
+
+
 
         locationPermissionRequest.launch(new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,

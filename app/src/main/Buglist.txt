@@ -1,4 +1,13 @@
 
+Some notes on Workers/Services
+    -Workers are great because they guarantee that their tasks will be completed even if the app crashes or even if the phone restarts.
+    -So the obvious use case for workers would be to handle the uploading of received logs, since that can and should be done in the background, and reliability is important
+    -Right now, we're using the FirebaseWorker pretty much only to launch the firebase service, not to actually run any of the firebaseservice functions. So we have all the overhead of a worker, but I don't think we're actually getting any benefit.
+
+
+- There are two firebaseworker creations in workerwrapper; a periodicRequestbuilder, and a oneTimeRequestBuilder. If you only have the second, then firebaseservice just doesn't seem to get launched a lot of the time, but when it does launch it uploads properly. If you only have the first, it launches consistently, but throws a lot of 'no auth token for request' warnings before uploading the logs anyway. Which one do we need and why?
+    -The PeriodicRequest worker does actually launch eventually, but doesn't appear to actually run anything when it does
+- Check for erroneous CCW rotation responses locked in the rotator at the CW extent of its rotation; CCW commands were being sent but not logged somehow, so were repeatedly stopped by the check.
 -Rotator keeps going past upper bound until it gets stuck at 400 degrees (also, doesn't that angle measure imply that we'll be in negative if we rotate past 0?)
 - RSSI and channel from received packets aren't parsed properly (probably fixed)
 -After an unspecified amount of time with autoRotate toggled off, the receiver will spontaneously start rotating counterclockwise and won't stop until you force it to in some way
@@ -11,3 +20,28 @@
 -Include logging magnetometer data as well as the potentiometer data to firebase
 -Firebase worker is not launching. When OneTimeWorkRequestBuilder is uncommented in WorkerWrapper.kt,
     works, but causes a bunch of "no auth tokens for request" warnings
+
+
+
+
+-tried having FirebaseWorker just run uploadLog() if a FirebaseService already existed, and got this error:
+5428 WM-WorkerWrapper        de.kai_morich.simple_usb_terminal    E  Work [ id=0fa2efb3-6899-4c5b-b2f2-bc9fc4c31c06, tags={ de.kai_morich.simple_usb_terminal.FirebaseWorker } ] failed because it threw an exception/error
+                                                                                                    java.util.concurrent.ExecutionException: java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.Context android.content.Context.getApplicationContext()' on a null object reference
+                                                                                                    	at androidx.work.impl.utils.futures.AbstractFuture.getDoneValue(AbstractFuture.java:516)
+                                                                                                    	at androidx.work.impl.utils.futures.AbstractFuture.get(AbstractFuture.java:475)
+                                                                                                    	at androidx.work.impl.WorkerWrapper$2.run(WorkerWrapper.java:311)
+                                                                                                    	at androidx.work.impl.utils.SerialExecutor$Task.run(SerialExecutor.java:91)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+                                                                                                    	at java.lang.Thread.run(Thread.java:1012)
+                                                                                                    Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.Context android.content.Context.getApplicationContext()' on a null object reference
+                                                                                                    	at android.content.ContextWrapper.getApplicationContext(ContextWrapper.java:125)
+                                                                                                    	at de.kai_morich.simple_usb_terminal.FirebaseService.uploadLog(FirebaseService.kt:250)
+                                                                                                    	at de.kai_morich.simple_usb_terminal.FirebaseWorker.doWork(FirebaseWorker.kt:50)
+                                                                                                    	at androidx.work.CoroutineWorker$startWork$1.invokeSuspend(CoroutineWorker.kt:68)
+                                                                                                    	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+                                                                                                    	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:106)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:571)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:750)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:678)
+                                                                                                    	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:665)
