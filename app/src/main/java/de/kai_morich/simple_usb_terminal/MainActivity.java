@@ -52,6 +52,8 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     private StorageReference storageRef;
     private LocationHelper locationHelper;
 
+    private FirebaseAuth mAuth;
+
     ActivityResultLauncher<String[]> locationPermissionRequest =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
                         Boolean fineLocationGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
@@ -78,21 +80,27 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         //following line will keep the screen active
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // initialize Firebase Auth
+        mAuth = FirebaseAuth.getInstance();
+
+        //setup toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportFragmentManager().addOnBackStackChangedListener(this);
 
+        //start service to get GPS and headings
         startService(new Intent(this, SensorHelper.class));
 
-
-        WorkerWrapper.checkWorkerStatus(getApplicationContext());
-        WorkerWrapper.stopFireBaseWorker(getApplicationContext());
-        WorkerWrapper.checkWorkerStatus(getApplicationContext());
+        //stop firebase worker (from testing)
+//        WorkerWrapper.checkWorkerStatus(getApplicationContext());
+//        WorkerWrapper.stopFireBaseWorker(getApplicationContext());
+//        WorkerWrapper.checkWorkerStatus(getApplicationContext());
 
 
 //        WorkerWrapper.startFirebaseWorker(getApplicationContext());
         WorkerWrapper.startSerialWorker(getApplicationContext());
 
+        //start firebase service
         startService(new Intent(this, FirebaseService.class));
 
 

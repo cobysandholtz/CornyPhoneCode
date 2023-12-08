@@ -37,6 +37,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -103,6 +104,8 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private SerialService service;
 
     private TextView receiveText;
+
+    private CircularProgressIndicator circularProgress;
 
     private TextView angleDisplayText;
 
@@ -315,6 +318,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         rotationStateDisplayText = view.findViewById(R.id.RotationStateDisplay);
         rotationStateDisplayText.setText("rotation State: ");
 
+        circularProgress = view.findViewById(R.id.circularProgress);
+
+        //start point is
+
+        circularProgress.setRotation(195f);
+        circularProgress.setProgress(90);
+
 
         View stopUploadBtn = view.findViewById(R.id.stop_upload_btn);
         stopUploadBtn.setOnClickListener(btn -> {
@@ -335,9 +345,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
         headingSlider = view.findViewById(R.id.slider);
         //load the min/max from local storage
-//        sharedPref = getContext().getSharedPreferences(PREFERENCE_FILE, Context.MODE_PRIVATE);
-//        float headingMin = sharedPref.getFloat("heading_min", /*default*/20.0f);
-//        float headingMax = sharedPref.getFloat("heading_max", /*default*/270.0f);
+        sharedPref = getContext().getSharedPreferences(PREFERENCE_FILE, Context.MODE_PRIVATE);
+        float headingMin = sharedPref.getFloat("heading_min", /*default*/20.0f);
+        float headingMax = sharedPref.getFloat("heading_max", /*default*/270.0f);
+        circularProgress.setRotation( 180f + headingMin);
+        circularProgress.setProgress((int) ((headingMax - headingMin)/3.6f));
+
         //load the min/max from the slider at start
 //        float headingMin = 20.0f;
 //        float headingMax = 270.0f;
@@ -354,6 +367,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
                 rotationMinDisplay.setText(new StringBuilder().append("Min: ").append(String.format("%.0f", arr[0])).toString());
                 rotationMaxDisplay.setText(new StringBuilder().append("Max: ").append(String.format("%.0f", arr[1])).toString());
+
+                circularProgress.setRotation( 180f + arr[0]);
+                circularProgress.setProgress((int) ((arr[1] - arr[0])/3.6f));
 
                 headingRangeIntent.putExtra(SerialService.KEY_HEADING_RANGE_STATE, arr);
                 SerialService.getInstance().sendBroadcast(headingRangeIntent);
