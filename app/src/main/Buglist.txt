@@ -20,6 +20,7 @@ Some notes on Workers/Services
 -Include logging magnetometer data as well as the potentiometer data to firebase
 -Firebase worker is not launching. When OneTimeWorkRequestBuilder is uncommented in WorkerWrapper.kt,
     works, but causes a bunch of "no auth tokens for request" warnings
+-Make sure queue system for firebase uploads is working/ make a new one
 
 
 
