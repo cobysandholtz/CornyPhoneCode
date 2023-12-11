@@ -15,6 +15,9 @@ Some notes on Workers/Services
 
 -Some packets stored in the logs are much longer than they should be; they have the full correct packet and then up to several hundred bytes of additional bad data. We should stop adding more to parse after 251 bytes.
 -Include logging magnetometer data as well as the potentiometer data to firebase
+-Firebase worker is not launching. When OneTimeWorkRequestBuilder is uncommented in WorkerWrapper.kt,
+    works, but causes a bunch of "no auth tokens for request" warnings
+-Make sure queue system for firebase uploads is working/ make a new one
 
 
 
