@@ -653,7 +653,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 return;
 
             pendingPacket = BlePacket.parsePacket(data);
-        } else if (BGapi.isAngleResponse(data)) {
+        } else if (BGapi.isAngleOrBattResponse(data)) {
 //            byte[] lastTwoBytes = new byte[2];
 ////             Extract the last 2 bytes
 //            System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array

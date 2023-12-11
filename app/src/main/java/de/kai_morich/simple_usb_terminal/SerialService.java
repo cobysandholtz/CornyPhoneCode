@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -26,7 +27,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedList;
-import java.util.Objects;
 import java.util.Queue;
 
 /**
@@ -101,15 +101,17 @@ public class SerialService extends Service implements SerialListener {
     private final long temperatureInterval = 300000; /*5 min*/
     private Handler temperatureHandler;
 
+    private Handler batteryCheckHandler;
+
     private BlePacket pendingPacket;
     private byte[] pendingBytes = null;
     private static SerialService instance;
 
-    public static float getPotAngle() {
-        return potAngle;
-    }
+    public static float potAngle = 0.0f;
 
-    public static float potAngle;
+    public static float lastBatteryVoltage = 0.0f;
+
+    private static int  phoneCharge = 0;
 
     public static String lastCommand;
 
@@ -126,6 +128,13 @@ public class SerialService extends Service implements SerialListener {
         return instance;
     }
 
+    public static float getBatteryVoltage() { return lastBatteryVoltage; }
+
+    public static float getPhoneChargePercent() { return phoneCharge; }
+
+    public static float getPotAngle() {
+        return potAngle;
+    }
 
     /**
      * Creates an intent with the input string and passes it to Terminal Fragment, which then prints it
@@ -252,6 +261,8 @@ public class SerialService extends Service implements SerialListener {
 
 //                    System.out.println("About to write headings to firebase service companion");
 
+
+
                     if (lastHeadingTime == null) {
                         lastHeadingTime = LocalDateTime.now();
                     }
@@ -329,6 +340,24 @@ public class SerialService extends Service implements SerialListener {
         }
     };
 
+    private static BatteryManager bm;
+
+    private final Runnable batteryCheckRunnable = new Runnable() { //written by GPT 3.5 with prompts from Coby's code
+
+        @Override
+        public void run() {
+            bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
+            phoneCharge = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            print_to_terminal("Read Phone battery level: " + phoneCharge);
+            System.out.print("Battery level " +  String.valueOf(phoneCharge) + "\n");
+
+            Log.d("BatteryLevel", String.valueOf(phoneCharge));
+
+            batteryCheckHandler.postDelayed(batteryCheckRunnable, 60 * 1000); //delay
+        }
+    };
+
+
     /**
      * Lifecycle
      */
@@ -342,6 +371,7 @@ public class SerialService extends Service implements SerialListener {
 
         startRotationHandler();
         startTemperatureHandler();
+        startBatteryCheckHandler();
     }
 
     /**
@@ -373,6 +403,14 @@ public class SerialService extends Service implements SerialListener {
         if (looper != null) {
             temperatureHandler = new Handler(looper);
             temperatureHandler.postDelayed(temperatureRunnable, 5000);
+        }
+    }
+
+    private void startBatteryCheckHandler() {
+        Looper looper = Looper.myLooper();
+        if (looper != null) {
+            batteryCheckHandler = new Handler(looper);
+            batteryCheckHandler.post(batteryCheckRunnable);
         }
     }
 
@@ -608,27 +646,48 @@ public class SerialService extends Service implements SerialListener {
                     pendingBytes = data;
                 }
 
-            } else if (BGapi.isAngleResponse(data)) {
-                //todo: this comes in from the gecko bigendian, might need to swap around
-                byte[] lastTwoBytes = new byte[2];
+            } else if (BGapi.isAngleOrBattResponse(data)) {
+//                System.out.print("isAngleOrBattResponse()");
+
+                if (data[data.length - 1] == (byte) 0xFF) {
+                    byte[] lastTwoBytes = new byte[2];
 //             Extract the last 2 bytes
-                System.arraycopy(data, data.length - 2, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
+                    System.arraycopy(data, data.length - 3, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
 
 //             Extract the most significant 12 bits into an integer
-                int pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+                    int pot_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
 
 //             multiply by 1/2^12 (adc resolution)
-                float pot_voltage = (float) (pot_bits * 0.002);
+                    float pot_voltage = (float) (pot_bits * 0.002);
 
-                //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
-                //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
-                //with the offset depending on how we want to deal with wrapping around 0
-                potAngle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+                    //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
+                    //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
+                    //with the offset depending on how we want to deal with wrapping around 0
+                    potAngle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
 
-                lastHeadingTime = LocalDateTime.now();
+                    lastHeadingTime = LocalDateTime.now();
 
-                //send the angle and rotation state to terminal fragment to be displayed onscreen
-                send_heading_intent();
+                    //send the angle and rotation state to terminal fragment to be displayed onscreen
+                    send_heading_intent();
+                } else if (data[data.length - 1] == (byte) 0xF0) {
+
+                    byte[] lastTwoBytes = new byte[2];
+//              Extract the last 2 bytes
+                    System.arraycopy(data, data.length - 3, lastTwoBytes, 0, 2); //data bytes are in 14th and 15th positions in the array
+
+//              Extract the most significant 12 bits into an integer
+                    int batt_bits = ((lastTwoBytes[0] & 0xFF) << 4) | ((lastTwoBytes[1] & 0xF0) >>> 4);
+
+//              multiply by 1/2^12 (adc resolution)
+                    float batt_voltage = ((float) (batt_bits * 0.002)) * 6; //multiply by 6 for voltage divider
+
+                    lastBatteryVoltage = batt_voltage;
+
+                    System.out.print("Battery voltage was " + batt_voltage + "\n");
+                } else {
+                    System.out.print("ERROR: incorrect gecko reading flag\n");
+                    System.out.print("ERROR: got gecko reading that did not have correct type flag, flag was " + data[data.length - 1] + "\n");
+                }
 
                 //** CLOCKWISE = higher voltage, counterclockwise = lower voltage
 

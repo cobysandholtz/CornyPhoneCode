@@ -25,6 +25,10 @@ public class BlePacket {
     private double longg;
     private double magHeading;
     private double potHeading;
+
+    private float battVoltage;
+
+    private float phoneCharge;
     private String addr;
     private byte rssi;
     private byte channel;
@@ -40,6 +44,8 @@ public class BlePacket {
         time = LocalDateTime.now();
         magHeading = SensorHelper.getMagnetometerReadingSingleDim();
         potHeading = SerialService.getPotAngle();
+        battVoltage = SerialService.getBatteryVoltage();
+        phoneCharge = SerialService.getPhoneChargePercent();
 
         Location location = LocationBroadcastReceiver.Companion.getCurrentLocation();
         if (location != null) {
@@ -124,7 +130,10 @@ public class BlePacket {
         return time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"))
                 + "\nLat: " + latt
                 + "\nLong: " + longg
-                + "\nHead: " + magHeading
+                + "\nCompass Heading: " + magHeading
+                + "\nPotentiometer angle: " + potHeading
+                + "\nReceiver Battery Voltage: " + battVoltage
+                + "\nPhone Charge Percent" + phoneCharge
                 + "\nAddr: " + addr
                 + "\nRSSI: " + rssi
                 + "\nChannel: " + (channel & 0xFF /*'cast' to unsigned*/)
@@ -150,6 +159,8 @@ public class BlePacket {
                 + "," + longg
                 + "," + potHeading
                 + "," + magHeading
+                + "," + battVoltage
+                + "," + phoneCharge
                 + "," + addr
                 + "," + rssi
                 + "," + (channel & 0xFF)

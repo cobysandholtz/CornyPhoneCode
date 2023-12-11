@@ -5,13 +5,10 @@ Some notes on Workers/Services
     -Right now, we're using the FirebaseWorker pretty much only to launch the firebase service, not to actually run any of the firebaseservice functions. So we have all the overhead of a worker, but I don't think we're actually getting any benefit.
 
 
-- There are two firebaseworker creations in workerwrapper; a periodicRequestbuilder, and a oneTimeRequestBuilder. If you only have the second, then firebaseservice just doesn't seem to get launched a lot of the time, but when it does launch it uploads properly. If you only have the first, it launches consistently, but throws a lot of 'no auth token for request' warnings before uploading the logs anyway. Which one do we need and why?
-    -The PeriodicRequest worker does actually launch eventually, but doesn't appear to actually run anything when it does
-- Check for erroneous CCW rotation responses locked in the rotator at the CW extent of its rotation; CCW commands were being sent but not logged somehow, so were repeatedly stopped by the check.
--Rotator keeps going past upper bound until it gets stuck at 400 degrees (also, doesn't that angle measure imply that we'll be in negative if we rotate past 0?)
-- RSSI and channel from received packets aren't parsed properly (probably fixed)
+-The phone stops adding data to the uploaded logs after 24 hours or so, which we think was when the battery ran out and the phone was no longer charging
 -After an unspecified amount of time with autoRotate toggled off, the receiver will spontaneously start rotating counterclockwise and won't stop until you force it to in some way
 -Some slight kinks in the rotation state machine to be ironed out
+    -The logic to go into returning_to_bounds_ccw doesn't work if the angle measurement is greater than 360 degrees
 -Recovery from disconnect errors needs to be implemented as a safeguard
 -All errors and exceptions should get written to a file so that we can debug things after a long period of time (just pipe logcat out?)
     -Exception handling in general should be better; currently there is no recovery from any kind of runtime exception

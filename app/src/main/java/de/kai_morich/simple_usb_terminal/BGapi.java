@@ -75,13 +75,13 @@ public class BGapi {
                 && bytes[2] == 0x05 && bytes[3] == 0x01;
     }
 
-    public static boolean isAngleResponse(byte[] bytes) {
+    public static boolean isAngleOrBattResponse(byte[] bytes) {
 
         return bytes.length > 4 && bytes[0] == (byte) 0xA0 //stupid, but I know it'll work based on the above
-                && bytes[1] == 0x03
+                && bytes[1] == 0x04
                 && bytes[2] == (byte) 0xFF
                 && bytes[3] == 0x00
-                && bytes[4] == 0x02;
+                && bytes[4] == 0x03;
     }
 
     public static boolean isTemperatureResponse(byte[] bytes) {
