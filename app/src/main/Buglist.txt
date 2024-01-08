@@ -5,7 +5,33 @@ Some notes on Workers/Services
     -Right now, we're using the FirebaseWorker pretty much only to launch the firebase service, not to actually run any of the firebaseservice functions. So we have all the overhead of a worker, but I don't think we're actually getting any benefit.
 
 
+
+
 -The phone stops adding data to the uploaded logs after 24 hours or so, which we think was when the battery ran out and the phone was no longer charging
+    -we tried to fix this with a connect() call, which seemed to work at first, but then when run overnight, we kept getting null object exceptions:
+     FATAL EXCEPTION: main
+                                                                                                        Process: de.kai_morich.simple_usb_terminal, PID: 27124
+                                                                                                        java.lang.NullPointerException: Attempt to invoke virtual method 'void de.kai_morich.simple_usb_terminal.TerminalFragment.connect()' on a null object reference
+                                                                                                        	at de.kai_morich.simple_usb_terminal.MainActivity.onNewIntent(MainActivity.java:215)
+                                                                                                        	at android.app.Activity.performNewIntent(Activity.java:8145)
+                                                                                                        	at android.app.Instrumentation.callActivityOnNewIntent(Instrumentation.java:1444)
+                                                                                                        	at android.app.Instrumentation.callActivityOnNewIntent(Instrumentation.java:1457)
+                                                                                                        	at android.app.ActivityThread.deliverNewIntents(ActivityThread.java:3982)
+                                                                                                        	at android.app.ActivityThread.handleNewIntent(ActivityThread.java:3989)
+                                                                                                        	at android.app.servertransaction.NewIntentItem.execute(NewIntentItem.java:56)
+                                                                                                        	at android.app.servertransaction.ActivityTransactionItem.execute(ActivityTransactionItem.java:45)
+                                                                                                        	at android.app.servertransaction.TransactionExecutor.executeCallbacks(TransactionExecutor.java:135)
+                                                                                                        	at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:95)
+                                                                                                        	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2345)
+                                                                                                        	at android.os.Handler.dispatchMessage(Handler.java:106)
+                                                                                                        	at android.os.Looper.loopOnce(Looper.java:233)
+                                                                                                        	at android.os.Looper.loop(Looper.java:344)
+                                                                                                        	at android.app.ActivityThread.main(ActivityThread.java:8212)
+                                                                                                        	at java.lang.reflect.Method.invoke(Native Method)
+                                                                                                        	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:584)
+                                                                                                        	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1034)
+
+
 -After an unspecified amount of time with autoRotate toggled off, the receiver will spontaneously start rotating counterclockwise and won't stop until you force it to in some way
 -Some slight kinks in the rotation state machine to be ironed out
     -The logic to go into returning_to_bounds_ccw doesn't work if the angle measurement is greater than 360 degrees

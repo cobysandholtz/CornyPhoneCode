@@ -523,7 +523,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     //region Serial
 
-    private void connect() {
+    public void connect() {
         connect(null);
     }
 

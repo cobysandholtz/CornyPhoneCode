@@ -89,7 +89,7 @@ public class SerialService extends Service implements SerialListener {
 
     // rotation variables
     private final long motorRotateTime = 500; /*.5 s*/
-    private final long motorSleepTime = 5000; /*5 s*/
+    private final long motorSleepTime = 10000; /*10 s*/
     private RotationState rotationState = RotationState.IN_BOUNDS_CW;
     private static double headingMin = 0.0;
     private static double headingMax = 360.0;
@@ -647,7 +647,7 @@ public class SerialService extends Service implements SerialListener {
                 }
 
             } else if (BGapi.isAngleOrBattResponse(data)) {
-//                System.out.print("isAngleOrBattResponse()");
+                System.out.print("isAngleOrBattResponse()");
 
                 if (data[data.length - 1] == (byte) 0xFF) {
                     byte[] lastTwoBytes = new byte[2];

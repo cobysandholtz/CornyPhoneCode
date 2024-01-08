@@ -78,7 +78,7 @@ public class BGapi {
     public static boolean isAngleOrBattResponse(byte[] bytes) {
 
         return bytes.length > 4 && bytes[0] == (byte) 0xA0 //stupid, but I know it'll work based on the above
-                && bytes[1] == 0x04
+                && bytes[1] == 0x04 //todo: why do these change?
                 && bytes[2] == (byte) 0xFF
                 && bytes[3] == 0x00
                 && bytes[4] == 0x03;
