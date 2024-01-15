@@ -109,11 +109,16 @@ public class SerialService extends Service implements SerialListener {
 
     public static float potAngle = 0.0f;
 
+    //adding to this pushes out the oldest element if the buffer is full, allowing for time series averaging and other functions
+    public AngleMeasSeries angleMeasSeries = new AngleMeasSeries(5);
+
     public static float lastBatteryVoltage = 0.0f;
 
     private static int  phoneCharge = 0;
 
     public static String lastCommand;
+
+    public static Boolean shouldbeMoving;
 
     private static long lastEventTime = -1;
 
@@ -202,10 +207,12 @@ public class SerialService extends Service implements SerialListener {
 
                     //start rotation
                     write(TextUtil.fromHexString(rotateCommand));
+                    shouldbeMoving = true;
 
                     //wait motorRotateTime, then stop rotation
                     motorHandler.postDelayed(() -> {
                         try {
+                            shouldbeMoving = false;
                             write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
                             lastCommand = BGapi.ROTATE_STOP;
                         } catch (IOException e) {
@@ -647,7 +654,7 @@ public class SerialService extends Service implements SerialListener {
                 }
 
             } else if (BGapi.isAngleOrBattResponse(data)) {
-                System.out.print("isAngleOrBattResponse()");
+//                System.out.print("isAngleOrBattResponse()");
 
                 if (data[data.length - 1] == (byte) 0xFF) {
                     byte[] lastTwoBytes = new byte[2];
@@ -663,12 +670,23 @@ public class SerialService extends Service implements SerialListener {
                     //voltage scales from 0.037 to 2.98 across 450 degrees of rotation (need measurements for angle extent on either side
                     //angle should be ((angle_voltage - 0.037) / (2.98 - 0.028) * 450) - some_offset
                     //with the offset depending on how we want to deal with wrapping around 0
+                    // so we can keep
                     potAngle = (float) (((pot_voltage - 0.332) / (2.7 - 0.332)) * 360);
+
+                    Boolean isMoving = angleMeasSeries.addMeasurementFiltered(potAngle);
+                    //stop rotation in event of an erroneous input
+                    if (isMoving && !shouldbeMoving) {
+                        write(TextUtil.fromHexString(BGapi.ROTATE_STOP));
+                        System.out.println("Stopped Erroneous Rotation");
+                    }
+
 
                     lastHeadingTime = LocalDateTime.now();
 
                     //send the angle and rotation state to terminal fragment to be displayed onscreen
                     send_heading_intent();
+
+                //get battery voltage
                 } else if (data[data.length - 1] == (byte) 0xF0) {
 
                     byte[] lastTwoBytes = new byte[2];
@@ -834,3 +852,4 @@ public class SerialService extends Service implements SerialListener {
     }
 
 }
+

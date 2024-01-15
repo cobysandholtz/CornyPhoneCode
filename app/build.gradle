@@ -8,7 +8,7 @@ android {
     compileSdkVersion 32
     defaultConfig {
         targetSdkVersion 32
-        minSdkVersion 19
+        minSdk 24
         vectorDrawables.useSupportLibrary true
 
         applicationId "de.kai_morich.simple_usb_terminal"
