@@ -118,7 +118,7 @@ public class SerialService extends Service implements SerialListener {
 
     public static String lastCommand;
 
-    public static Boolean shouldbeMoving;
+    public static Boolean shouldbeMoving = false;
 
     private static long lastEventTime = -1;
 
@@ -155,6 +155,12 @@ public class SerialService extends Service implements SerialListener {
         Intent intent = new Intent(TerminalFragment.RECEIVE_HEADING_STATE);
         intent.putExtra(TerminalFragment.RECEIVE_ROTATION_STATE, rotationState.toString());
         intent.putExtra(TerminalFragment.RECEIVE_ANGLE, potAngle);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    void send_battery_intent() {
+        Intent intent = new Intent(TerminalFragment.RECEIVE_BATTERY_VOLTAGE);
+        intent.putExtra(TerminalFragment.BATTERY_VOLTAGE, lastBatteryVoltage);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
@@ -702,6 +708,7 @@ public class SerialService extends Service implements SerialListener {
                     lastBatteryVoltage = batt_voltage;
 
                     System.out.print("Battery voltage was " + batt_voltage + "\n");
+//                    send_battery_intent();
                 } else {
                     System.out.print("ERROR: incorrect gecko reading flag\n");
                     System.out.print("ERROR: got gecko reading that did not have correct type flag, flag was " + data[data.length - 1] + "\n");

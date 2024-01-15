@@ -109,6 +109,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     private TextView angleDisplayText;
 
+    private TextView batteryDisplayText;
     private TextView rotationStateDisplayText;
 
     private TextView rotationMinDisplay;
@@ -146,6 +147,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     public static final String RECEIVE_HEADING_STATE = "TerminalFragment.RECEIVE_HEADING_STATE";
     public static final String RECEIVE_ROTATION_STATE = "TerminalFragment.RECEIVE_ROTATION_STATE";
 
+    public static final String RECEIVE_BATTERY_VOLTAGE = "TerminalFragment.RECEIVE_BATTERY_VOLTAGE";
+
+    public static final String BATTERY_VOLTAGE = "TerminalFragment.BATTERY_VOLTAGE";
     public static final String RECEIVE_ANGLE = "TerminalFragment.RECEIVE_ANGLE";
     public static final String GENERAL_PURPOSE_PRINT = "TerminalFragment.GENERAL_PURPOSE_PRINT";
 
@@ -157,6 +161,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         @Override
         public void onReceive(Context context, Intent intent) {
             String s = null;
+//            System.out.println(intent.getAction());
             if (intent.getAction().equals(RECEIVE_HEADING_STATE)){
                 String state = intent.getStringExtra(RECEIVE_ROTATION_STATE);
                 double angle = intent.getFloatExtra(RECEIVE_ANGLE, 0); //todo: why does 0.0 not work here?
@@ -164,7 +169,13 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
                 angleDisplayText.setText(formattedAngle);
                 rotationStateDisplayText.setText(state);
 //                System.out.println("heading received: "+ angle);
-            } else if (intent.getAction().equals(GENERAL_PURPOSE_PRINT)) {
+            } else if (intent.getAction().equals(RECEIVE_BATTERY_VOLTAGE))  {
+                System.out.println("receive battery voltage intent");
+                double voltage = intent.getFloatExtra(BATTERY_VOLTAGE, 0);
+                String formattedVoltage = "Batt Voltage: " + String.format("%-7.1f", voltage);
+                batteryDisplayText.setText(formattedVoltage);
+            }
+            else if (intent.getAction().equals(GENERAL_PURPOSE_PRINT)) {
                 s = intent.getExtras().getString(GENERAL_PURPOSE_STRING);
                 System.out.println(s);
             }
@@ -313,6 +324,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         //setup angle display view
         angleDisplayText = view.findViewById(R.id.DisplayAngle);
         angleDisplayText.setText("Rotator Angle:");
+
+        batteryDisplayText = view.findViewById(R.id.batteryVoltage);
+        batteryDisplayText.setText("Batt Voltage:");
 
         //setup rotation state display view
         rotationStateDisplayText = view.findViewById(R.id.RotationStateDisplay);
