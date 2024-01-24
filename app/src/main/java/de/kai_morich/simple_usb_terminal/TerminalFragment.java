@@ -226,17 +226,12 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
      * */
     @Override
     public void onStart() {
+        System.out.println("Terminal Fragment onStart() called");
+
         super.onStart();
-        if (service != null) {
-            try {
-                service.attach(this);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        getActivity().bindService(new Intent(getActivity(), SerialService.class), this, Context.BIND_AUTO_CREATE);
+
         }
-        else
-            getActivity().startService(new Intent(getActivity(), SerialService.class)); // prevents service destroy on unbind from recreated activity caused by orientation change
-    }
 
     /**
      * Inherited from Fragment. Called by the system. Unsubscribes from messages from the serial device
@@ -264,7 +259,19 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     @Override
     public void onAttach(@NonNull Activity activity) {
         super.onAttach(activity);
-        getActivity().bindService(new Intent(getActivity(), SerialService.class), this, Context.BIND_AUTO_CREATE);
+
+
+        if (service != null) {
+            try {
+                service.attach(this);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        else
+            //if startService is called before bind(), then the service lives indefinitely
+            getActivity().startService(new Intent(getActivity(), SerialService.class)); // prevents service destroy on unbind from recreated activity caused by orientation change
+
     }
 
     @Override
@@ -305,6 +312,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
             getActivity().runOnUiThread(this::connect);
         }
     }
+
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
