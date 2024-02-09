@@ -316,6 +316,7 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
+        FirebaseService.Companion.getServiceInstance().appendFile("Serial Service Disconnected\n"); //todo: check that this works somehow
         service = null;
     }
 

@@ -1,24 +1,18 @@
 package de.kai_morich.simple_usb_terminal;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
-import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.provider.Settings;
-import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.WindowManager;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -28,29 +22,25 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
-import androidx.work.Operation;
-import androidx.work.PeriodicWorkRequest;
 
-import com.google.android.gms.location.CurrentLocationRequest;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.Priority;
-import com.google.android.gms.tasks.CancellationToken;
-import com.google.android.gms.tasks.OnTokenCanceledListener;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
-import java.util.Timer;
-import java.util.TimerTask;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
 public class MainActivity extends AppCompatActivity implements FragmentManager.OnBackStackChangedListener {
 
     private StorageReference storageRef;
     private LocationHelper locationHelper;
+
+    DevicePolicyManager mDPM;
+
+    MyDeviceAdminReceiver deviceAdminReceiver;
+
+    //used to identify the device admin receiver in the permission request intent (?)
+    ComponentName mDeviceAdminReceiver;
 
     private FirebaseAuth mAuth;
 
@@ -103,12 +93,34 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         //start firebase service
         startService(new Intent(this, FirebaseService.class));
 
+        //initialize Device Policy Manager (used for periodic restarts)
+        mDPM = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+        mDeviceAdminReceiver = new ComponentName(this, MyDeviceAdminReceiver.class);
+
+        System.out.println("Package name: " + this.getPackageName());
+
+        //next steps: create a button or something in device fragment (or terminal fragment)
+        //that triggers the request permissions activity for device administrator priveleges
+
+//        if(mDPM.isDeviceOwnerApp(this.getPackageName())) {
+//            System.out.println("mDPM is successful device administrator");
+//        }
+
+
+        Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+        intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, mDeviceAdminReceiver);
+        intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                "Some extra text explaining why we're asking for device admin permission");
+        startActivity(intent);
+
 
 
         locationPermissionRequest.launch(new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
         });
+
+
 
        locationHelper = new LocationHelper(this);
        locationHelper.startLocationUpdates();
@@ -210,9 +222,11 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
     protected void onNewIntent(Intent intent) {
         if ("android.hardware.usb.action.USB_DEVICE_ATTACHED".equals(intent.getAction())) {
             TerminalFragment terminal = (TerminalFragment) getSupportFragmentManager().findFragmentByTag("terminal");
-            if (terminal != null)
+            if (terminal != null) {
                 terminal.status("USB device detected");
                 terminal.connect();
+                //this might be the problem
+            }
         }
         super.onNewIntent(intent);
     }
